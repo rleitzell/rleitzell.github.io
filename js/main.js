@@ -187,18 +187,18 @@ class ScreenplayAnalyzer {
             html += `
                 <div class="scene-item">
                     <div class="scene-header">
-                        <span class="scene-number">Scene ${scene.number || 'Unknown'}</span>
-                        <span class="scene-location">${scene.location || 'Unknown Location'}</span>
-                        <span class="scene-time">${scene.timeOfDay || 'Unknown Time'}</span>
+                        <span class="scene-number">Scene ${escapeHtml(scene.number || 'Unknown')}</span>
+                        <span class="scene-location">${escapeHtml(scene.location || 'Unknown Location')}</span>
+                        <span class="scene-time">${escapeHtml(scene.timeOfDay || 'Unknown Time')}</span>
                     </div>
                     <div class="scene-content">
-                        <p><strong>Slugline:</strong> ${scene.slugline || 'No slugline'}</p>
-                        <p><strong>Characters:</strong> ${scene.characters.join(', ') || 'None identified'}</p>
-                        <p><strong>Length:</strong> ${scene.estimatedLength}/8 pages</p>
-                        ${scene.pageNumber ? `<p><strong>Page:</strong> ${scene.pageNumber}</p>` : ''}
+                        <p><strong>Slugline:</strong> ${escapeHtml(scene.slugline || 'No slugline')}</p>
+                        <p><strong>Characters:</strong> ${safeJoin(scene.characters) || 'None identified'}</p>
+                        <p><strong>Length:</strong> ${escapeHtml(scene.estimatedLength)}/8 pages</p>
+                        ${scene.pageNumber ? `<p><strong>Page:</strong> ${escapeHtml(scene.pageNumber)}</p>` : ''}
                         <details>
                             <summary>Content Preview</summary>
-                            <div class="scene-text">${this.truncateText(scene.content, 300)}</div>
+                            <div class="scene-text">${escapeHtml(this.truncateText(scene.content, 300))}</div>
                         </details>
                     </div>
                 </div>
@@ -223,8 +223,8 @@ class ScreenplayAnalyzer {
         for (const character of sortedCharacters) {
             html += `
                 <div class="character-item">
-                    <span class="character-name">${character.name}</span>
-                    <span class="character-count">${character.totalAppearances} scenes</span>
+                    <span class="character-name">${escapeHtml(character.name)}</span>
+                    <span class="character-count">${escapeHtml(character.totalAppearances)} scenes</span>
                 </div>
             `;
         }
@@ -246,8 +246,8 @@ class ScreenplayAnalyzer {
         for (const location of sortedLocations) {
             html += `
                 <div class="location-item">
-                    <span class="location-name">${location.name}</span>
-                    <span class="location-count">${location.totalUses} scenes</span>
+                    <span class="location-name">${escapeHtml(location.name)}</span>
+                    <span class="location-count">${escapeHtml(location.totalUses)} scenes</span>
                 </div>
             `;
         }

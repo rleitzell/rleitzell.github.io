@@ -197,15 +197,15 @@ class Phase2Manager {
             <form id="sceneEditForm">
                 <div class="form-group">
                     <label for="sceneNumber">Scene Number:</label>
-                    <input type="number" id="sceneNumber" value="${scene.number || ''}">
+                    <input type="number" id="sceneNumber" value="${escapeHtml(scene.number || '')}">
                 </div>
                 <div class="form-group">
                     <label for="sceneSlugline">Slugline:</label>
-                    <input type="text" id="sceneSlugline" value="${scene.slugline}" placeholder="INT./EXT. LOCATION - TIME">
+                    <input type="text" id="sceneSlugline" value="${escapeHtml(scene.slugline)}" placeholder="INT./EXT. LOCATION - TIME">
                 </div>
                 <div class="form-group">
                     <label for="sceneLocation">Location:</label>
-                    <input type="text" id="sceneLocation" value="${scene.location}">
+                    <input type="text" id="sceneLocation" value="${escapeHtml(scene.location)}">
                 </div>
                 <div class="form-group">
                     <label for="sceneTimeOfDay">Time of Day:</label>
@@ -220,15 +220,15 @@ class Phase2Manager {
                 </div>
                 <div class="form-group">
                     <label for="sceneCharacters">Characters (comma-separated):</label>
-                    <input type="text" id="sceneCharacters" value="${scene.characters.join(', ')}">
+                    <input type="text" id="sceneCharacters" value="${safeJoin(scene.characters)}">
                 </div>
                 <div class="form-group">
                     <label for="sceneLength">Estimated Length (1/8 pages):</label>
-                    <input type="number" id="sceneLength" step="0.125" value="${scene.estimatedLength}">
+                    <input type="number" id="sceneLength" step="0.125" value="${escapeHtml(scene.estimatedLength)}">
                 </div>
                 <div class="form-group">
                     <label for="sceneContent">Content:</label>
-                    <textarea id="sceneContent" rows="10">${scene.content}</textarea>
+                    <textarea id="sceneContent" rows="10">${escapeHtml(scene.content)}</textarea>
                 </div>
                 <div class="form-actions">
                     <button type="button" onclick="window.phase2Manager.saveSceneEdit(${sceneIndex})">Save Changes</button>
