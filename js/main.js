@@ -9,6 +9,10 @@ class ScreenplayAnalyzer {
         this.exportUtils = new ExportUtils();
         this.currentAnalysis = null;
         
+        // Operation management for race condition prevention
+        this.currentOperation = null;
+        this.operationId = 0;
+        
         this.initializeUI();
         this.setupEventListeners();
     }
@@ -74,7 +78,7 @@ class ScreenplayAnalyzer {
     async handleFileSelect(file) {
         if (!file) return;
 
-        if (file.type !== 'application/pdf') {
+        if (file.type !== SCREENPLAY_CONSTANTS.FILE_TYPES.SUPPORTED_PDF_TYPE) {
             this.showError('Please select a PDF file.');
             return;
         }
@@ -88,7 +92,12 @@ class ScreenplayAnalyzer {
 
         } catch (error) {
             console.error('File processing error:', error);
-            this.showError(`Error processing file: ${error.message}`);
+            this.handleError(error, {
+                operation: 'handleFileSelect',
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type
+            });
         }
     }
 
@@ -105,34 +114,94 @@ class ScreenplayAnalyzer {
      * Process screenplay PDF
      */
     async processScreenplay(file) {
+        // Cancel any existing operation
+        if (this.currentOperation) {
+            this.currentOperation.cancelled = true;
+        }
+
+        // Create new operation with unique ID
+        const operation = {
+            id: ++this.operationId,
+            cancelled: false,
+            file: file
+        };
+        this.currentOperation = operation;
+
         try {
+            // Check if operation was cancelled before we start
+            if (operation.cancelled) return;
+
             // Show processing section
             this.elements.processingSection.style.display = 'block';
             this.elements.resultsSection.style.display = 'none';
 
-            // Set up progress callback
+            // Set up progress callback with cancellation check
             this.pdfExtractor.setProgressCallback((percentage, message) => {
-                this.updateProgress(percentage, message);
+                if (!operation.cancelled && this.currentOperation === operation) {
+                    this.updateProgress(percentage, message);
+                }
             });
 
             // Extract text from PDF
             this.updateProgress(0, 'Starting extraction...');
+            if (operation.cancelled) return;
+            
             const extractedData = await this.pdfExtractor.extractTextFromPDF(file);
+
+            // Check if operation was cancelled after PDF extraction
+            if (operation.cancelled || this.currentOperation !== operation) return;
 
             // Analyze scenes
             this.updateProgress(95, 'Analyzing scenes...');
-            this.currentAnalysis = await this.sceneAnalyzer.analyzeText(extractedData);
+            const analysisResult = await this.sceneAnalyzer.analyzeText(extractedData);
 
-            // Display results
+            // Final check before displaying results
+            if (operation.cancelled || this.currentOperation !== operation) return;
+
+            // Update current analysis and display results
+            this.currentAnalysis = analysisResult;
             this.updateProgress(100, 'Complete!');
-            setTimeout(() => {
-                this.displayResults();
-            }, 500);
+            
+            // Use a more controlled approach instead of setTimeout
+            this.displayResultsWhenReady(operation);
 
         } catch (error) {
-            console.error('Processing error:', error);
-            this.showError(`Error processing screenplay: ${error.message}`);
+            // Only show error if this operation is still current
+            if (!operation.cancelled && this.currentOperation === operation) {
+                console.error('Processing error:', error);
+                this.handleError(error, {
+                    operation: 'processScreenplay',
+                    file: file.name,
+                    operationId: operation.id
+                });
+            }
+        } finally {
+            // Clean up if this is still the current operation
+            if (this.currentOperation === operation) {
+                this.currentOperation = null;
+            }
         }
+    }
+
+    /**
+     * Display results when ready, with operation validation
+     */
+    displayResultsWhenReady(operation) {
+        // Double-check that this operation is still current
+        if (operation.cancelled || this.currentOperation !== operation) {
+            return;
+        }
+
+        // Small delay to ensure UI is ready, but with validation
+        setTimeout(() => {
+            if (!operation.cancelled && this.currentOperation === operation) {
+                this.displayResults();
+                // Clear operation after successful display
+                if (this.currentOperation === operation) {
+                    this.currentOperation = null;
+                }
+            }
+        }, SCREENPLAY_CONSTANTS.UI.PROGRESS_ANIMATION_DELAY); // Reduced from 500ms for better responsiveness
     }
 
     /**
@@ -144,10 +213,33 @@ class ScreenplayAnalyzer {
     }
 
     /**
-     * Display analysis results
+     * Display analysis results with comprehensive validation
      */
     displayResults() {
-        if (!this.currentAnalysis) return;
+        if (!this.currentAnalysis) {
+            console.warn('No analysis data available to display');
+            this.showError('No analysis data available to display');
+            return;
+        }
+
+        // Validate essential analysis data structure
+        if (!this.currentAnalysis.scenes || !Array.isArray(this.currentAnalysis.scenes)) {
+            console.error('Invalid analysis data: scenes array missing or invalid');
+            this.showError('Invalid analysis data received');
+            return;
+        }
+
+        if (!this.currentAnalysis.characters || !Array.isArray(this.currentAnalysis.characters)) {
+            console.error('Invalid analysis data: characters array missing or invalid');
+            this.showError('Invalid analysis data received');
+            return;
+        }
+
+        if (!this.currentAnalysis.locations || !Array.isArray(this.currentAnalysis.locations)) {
+            console.error('Invalid analysis data: locations array missing or invalid');
+            this.showError('Invalid analysis data received');
+            return;
+        }
 
         this.elements.processingSection.style.display = 'none';
         this.elements.resultsSection.style.display = 'block';
@@ -161,44 +253,61 @@ class ScreenplayAnalyzer {
         if (window.phase2Manager && window.phase2Manager.isEditMode) {
             setTimeout(() => {
                 window.phase2Manager.enableDragDropInEditMode();
-            }, 100);
+            }, SCREENPLAY_CONSTANTS.UI.DRAG_DROP_ENABLE_DELAY);
         }
     }
 
     /**
-     * Display scenes list
+     * Display scenes list with validation
      */
     displayScenes() {
+        if (!this.currentAnalysis?.scenes || !this.currentAnalysis?.summary) {
+            console.error('Invalid analysis data for scene display');
+            return;
+        }
+
         const { scenes, summary } = this.currentAnalysis;
         
+        // Validate scenes array
+        if (!Array.isArray(scenes)) {
+            console.error('Scenes data is not an array');
+            return;
+        }
+
         let html = `
             <div class="summary-stats">
                 <h3>Summary</h3>
-                <p><strong>Total Scenes:</strong> ${summary.totalScenes}</p>
-                <p><strong>Estimated Length:</strong> ${summary.estimatedPages} pages (${summary.totalLength}/8 page units)</p>
-                <p><strong>Average Scene Length:</strong> ${summary.averageSceneLength}/8 pages</p>
-                <p><strong>Characters:</strong> ${summary.characterCount}</p>
-                <p><strong>Locations:</strong> ${summary.locationCount}</p>
+                <p><strong>Total Scenes:</strong> ${escapeHtml(summary.totalScenes || 0)}</p>
+                <p><strong>Estimated Length:</strong> ${escapeHtml(summary.estimatedPages || 0)} pages (${escapeHtml(summary.totalLength || 0)}/8 page units)</p>
+                <p><strong>Average Scene Length:</strong> ${escapeHtml(summary.averageSceneLength || 0)}/8 pages</p>
+                <p><strong>Characters:</strong> ${escapeHtml(summary.characterCount || 0)}</p>
+                <p><strong>Locations:</strong> ${escapeHtml(summary.locationCount || 0)}</p>
             </div>
             <div class="scenes-grid">
         `;
 
         for (const scene of scenes) {
+            // Validate each scene object
+            if (!scene || typeof scene !== 'object') {
+                console.warn('Invalid scene object found, skipping');
+                continue;
+            }
+
             html += `
                 <div class="scene-item">
                     <div class="scene-header">
-                        <span class="scene-number">Scene ${scene.number || 'Unknown'}</span>
-                        <span class="scene-location">${scene.location || 'Unknown Location'}</span>
-                        <span class="scene-time">${scene.timeOfDay || 'Unknown Time'}</span>
+                        <span class="scene-number">Scene ${escapeHtml(scene.number || 'Unknown')}</span>
+                        <span class="scene-location">${escapeHtml(scene.location || 'Unknown Location')}</span>
+                        <span class="scene-time">${escapeHtml(scene.timeOfDay || 'Unknown Time')}</span>
                     </div>
                     <div class="scene-content">
-                        <p><strong>Slugline:</strong> ${scene.slugline || 'No slugline'}</p>
-                        <p><strong>Characters:</strong> ${scene.characters.join(', ') || 'None identified'}</p>
-                        <p><strong>Length:</strong> ${scene.estimatedLength}/8 pages</p>
-                        ${scene.pageNumber ? `<p><strong>Page:</strong> ${scene.pageNumber}</p>` : ''}
+                        <p><strong>Slugline:</strong> ${escapeHtml(scene.slugline || 'No slugline')}</p>
+                        <p><strong>Characters:</strong> ${safeJoin(scene.characters) || 'None identified'}</p>
+                        <p><strong>Length:</strong> ${escapeHtml(scene.estimatedLength || 0)}/8 pages</p>
+                        ${scene.pageNumber ? `<p><strong>Page:</strong> ${escapeHtml(scene.pageNumber)}</p>` : ''}
                         <details>
                             <summary>Content Preview</summary>
-                            <div class="scene-text">${this.truncateText(scene.content, 300)}</div>
+                            <div class="scene-text">${escapeHtml(this.truncateText(scene.content || '', SCREENPLAY_CONSTANTS.VALIDATION.MAX_CONTENT_PREVIEW_LENGTH))}</div>
                         </details>
                     </div>
                 </div>
@@ -223,8 +332,8 @@ class ScreenplayAnalyzer {
         for (const character of sortedCharacters) {
             html += `
                 <div class="character-item">
-                    <span class="character-name">${character.name}</span>
-                    <span class="character-count">${character.totalAppearances} scenes</span>
+                    <span class="character-name">${escapeHtml(character.name)}</span>
+                    <span class="character-count">${escapeHtml(character.totalAppearances)} scenes</span>
                 </div>
             `;
         }
@@ -246,8 +355,8 @@ class ScreenplayAnalyzer {
         for (const location of sortedLocations) {
             html += `
                 <div class="location-item">
-                    <span class="location-name">${location.name}</span>
-                    <span class="location-count">${location.totalUses} scenes</span>
+                    <span class="location-name">${escapeHtml(location.name)}</span>
+                    <span class="location-count">${escapeHtml(location.totalUses)} scenes</span>
                 </div>
             `;
         }
@@ -256,20 +365,25 @@ class ScreenplayAnalyzer {
     }
 
     /**
-     * Show error message
+     * Handle error using centralized error handler
      */
-    showError(message) {
+    handleError(error, context = {}) {
         // Hide processing section
         this.elements.processingSection.style.display = 'none';
         
-        // Show error in processing status area
-        this.elements.processingSection.style.display = 'block';
-        this.elements.progressFill.style.width = '0%';
-        this.elements.processingStatus.innerHTML = `<span style="color: red;">Error: ${message}</span>`;
-        
-        setTimeout(() => {
-            this.elements.processingSection.style.display = 'none';
-        }, 5000);
+        // Use centralized error handler
+        window.errorHandler.handle(error, {
+            component: 'ScreenplayAnalyzer',
+            ...context
+        });
+    }
+
+    /**
+     * Show error message (legacy method, redirects to centralized handler)
+     * @deprecated Use handleError instead
+     */
+    showError(message) {
+        this.handleError(new Error(message));
     }
 
     /**

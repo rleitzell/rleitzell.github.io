@@ -13,6 +13,10 @@ class Phase2Manager {
         this.draggedElement = null;
         this.duplicateScenes = [];
         
+        // Event listener management for memory leak prevention
+        this.eventListeners = new Map();
+        this.boundMethods = new Map();
+        
         this.initializePhase2Features();
     }
 
@@ -24,6 +28,62 @@ class Phase2Manager {
         this.setupDragDropSystem();
         this.setupMappingSystem();
         this.setupDuplicateResolution();
+    }
+
+    /**
+     * Add event listener with cleanup tracking
+     */
+    addEventListenerWithCleanup(element, event, handler, key = null) {
+        if (!element) return;
+        
+        // Use provided key or generate one based on element and event
+        const listenerKey = key || `${element.tagName || 'unknown'}_${element.id || element.className || 'unknown'}_${event}`;
+        
+        // Remove existing listener if present
+        this.removeEventListener(listenerKey);
+        
+        // Add the new listener
+        element.addEventListener(event, handler);
+        
+        // Store reference for cleanup
+        this.eventListeners.set(listenerKey, {
+            element,
+            event,
+            handler
+        });
+    }
+
+    /**
+     * Remove specific event listener
+     */
+    removeEventListener(key) {
+        const listener = this.eventListeners.get(key);
+        if (listener) {
+            listener.element.removeEventListener(listener.event, listener.handler);
+            this.eventListeners.delete(key);
+        }
+    }
+
+    /**
+     * Cleanup all event listeners
+     */
+    cleanup() {
+        this.eventListeners.forEach((listener, key) => {
+            listener.element.removeEventListener(listener.event, listener.handler);
+        });
+        this.eventListeners.clear();
+        this.boundMethods.clear();
+    }
+
+    /**
+     * Get or create bound method for reuse
+     */
+    getBoundMethod(methodName, ...args) {
+        const key = `${methodName}_${args.join('_')}`;
+        if (!this.boundMethods.has(key)) {
+            this.boundMethods.set(key, this[methodName].bind(this, ...args));
+        }
+        return this.boundMethods.get(key);
     }
 
     /**
@@ -141,6 +201,21 @@ class Phase2Manager {
         scenesList.querySelectorAll('.scene-selector').forEach(el => el.remove());
         scenesList.querySelectorAll('.scene-edit-btn').forEach(el => el.remove());
         scenesList.querySelectorAll('.conflict-indicator').forEach(el => el.remove());
+        
+        // Clean up drag/drop event listeners when exiting edit mode
+        // This helps prevent memory leaks when toggling edit mode multiple times
+        const characterItems = document.querySelectorAll('.character-item[draggable="true"]');
+        const locationItems = document.querySelectorAll('.location-item[draggable="true"]');
+        
+        characterItems.forEach((item, index) => {
+            this.removeEventListener(`character_${index}_dragstart`);
+            this.removeEventListener(`character_${index}_dragend`);
+        });
+        
+        locationItems.forEach((item, index) => {
+            this.removeEventListener(`location_${index}_dragstart`);
+            this.removeEventListener(`location_${index}_dragend`);
+        });
     }
 
     /**
@@ -187,25 +262,42 @@ class Phase2Manager {
     }
 
     /**
-     * Open scene editor modal
+     * Open scene editor modal with comprehensive input validation
      */
     openSceneEditor(sceneIndex) {
+        // Comprehensive input validation
+        if (!this.app?.currentAnalysis?.scenes) {
+            console.warn('No analysis data available for scene editing');
+            alert('No analysis data available. Please process a screenplay first.');
+            return;
+        }
+        
+        if (typeof sceneIndex !== 'number' || sceneIndex < 0 || sceneIndex >= this.app.currentAnalysis.scenes.length) {
+            console.warn(`Invalid scene index: ${sceneIndex}. Valid range: 0-${this.app.currentAnalysis.scenes.length - 1}`);
+            alert('Invalid scene selected.');
+            return;
+        }
+        
         const scene = this.app.currentAnalysis.scenes[sceneIndex];
-        if (!scene) return;
+        if (!scene) {
+            console.warn(`Scene at index ${sceneIndex} is null or undefined`);
+            alert('Selected scene data is not available.');
+            return;
+        }
 
         const modal = this.createModal('Edit Scene', `
             <form id="sceneEditForm">
                 <div class="form-group">
                     <label for="sceneNumber">Scene Number:</label>
-                    <input type="number" id="sceneNumber" value="${scene.number || ''}">
+                    <input type="number" id="sceneNumber" value="${escapeHtml(scene.number || '')}">
                 </div>
                 <div class="form-group">
                     <label for="sceneSlugline">Slugline:</label>
-                    <input type="text" id="sceneSlugline" value="${scene.slugline}" placeholder="INT./EXT. LOCATION - TIME">
+                    <input type="text" id="sceneSlugline" value="${escapeHtml(scene.slugline)}" placeholder="INT./EXT. LOCATION - TIME">
                 </div>
                 <div class="form-group">
                     <label for="sceneLocation">Location:</label>
-                    <input type="text" id="sceneLocation" value="${scene.location}">
+                    <input type="text" id="sceneLocation" value="${escapeHtml(scene.location)}">
                 </div>
                 <div class="form-group">
                     <label for="sceneTimeOfDay">Time of Day:</label>
@@ -220,15 +312,15 @@ class Phase2Manager {
                 </div>
                 <div class="form-group">
                     <label for="sceneCharacters">Characters (comma-separated):</label>
-                    <input type="text" id="sceneCharacters" value="${scene.characters.join(', ')}">
+                    <input type="text" id="sceneCharacters" value="${safeJoin(scene.characters)}">
                 </div>
                 <div class="form-group">
                     <label for="sceneLength">Estimated Length (1/8 pages):</label>
-                    <input type="number" id="sceneLength" step="0.125" value="${scene.estimatedLength}">
+                    <input type="number" id="sceneLength" step="0.125" value="${escapeHtml(scene.estimatedLength)}">
                 </div>
                 <div class="form-group">
                     <label for="sceneContent">Content:</label>
-                    <textarea id="sceneContent" rows="10">${scene.content}</textarea>
+                    <textarea id="sceneContent" rows="10">${escapeHtml(scene.content)}</textarea>
                 </div>
                 <div class="form-actions">
                     <button type="button" onclick="window.phase2Manager.saveSceneEdit(${sceneIndex})">Save Changes</button>
@@ -241,11 +333,48 @@ class Phase2Manager {
     }
 
     /**
-     * Save scene edits
+     * Save scene edits with validation
      */
     saveSceneEdit(sceneIndex) {
+        // Comprehensive input validation
+        if (!this.app?.currentAnalysis?.scenes) {
+            console.warn('No analysis data available for saving scene edits');
+            alert('No analysis data available.');
+            return;
+        }
+        
+        if (typeof sceneIndex !== 'number' || sceneIndex < 0 || sceneIndex >= this.app.currentAnalysis.scenes.length) {
+            console.warn(`Invalid scene index for save: ${sceneIndex}`);
+            alert('Invalid scene selected.');
+            return;
+        }
+        
         const scene = this.app.currentAnalysis.scenes[sceneIndex];
-        if (!scene) return;
+        if (!scene) {
+            console.warn(`Scene at index ${sceneIndex} is null or undefined during save`);
+            alert('Scene data is not available.');
+            return;
+        }
+
+        // Validate form elements exist
+        const formElements = {
+            sceneNumber: document.getElementById('sceneNumber'),
+            sceneSlugline: document.getElementById('sceneSlugline'),
+            sceneLocation: document.getElementById('sceneLocation'),
+            sceneTimeOfDay: document.getElementById('sceneTimeOfDay'),
+            sceneCharacters: document.getElementById('sceneCharacters'),
+            sceneLength: document.getElementById('sceneLength'),
+            sceneContent: document.getElementById('sceneContent')
+        };
+
+        // Check if all form elements exist
+        for (const [fieldName, element] of Object.entries(formElements)) {
+            if (!element) {
+                console.error(`Form element ${fieldName} not found`);
+                alert('Form validation error. Please try again.');
+                return;
+            }
+        }
 
         // Get form values
         const number = parseInt(document.getElementById('sceneNumber').value) || null;
@@ -485,7 +614,8 @@ class Phase2Manager {
                 item.className += ' draggable-item';
                 item.dataset.characterIndex = index;
                 
-                item.addEventListener('dragstart', (e) => {
+                // Use managed event listeners to prevent memory leaks
+                const dragStartHandler = (e) => {
                     this.draggedElement = {
                         type: 'character',
                         index: index,
@@ -495,12 +625,15 @@ class Phase2Manager {
                     e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setData('text/html', item.outerHTML);
                     item.classList.add('dragging');
-                });
+                };
 
-                item.addEventListener('dragend', (e) => {
+                const dragEndHandler = (e) => {
                     item.classList.remove('dragging');
                     this.draggedElement = null;
-                });
+                };
+
+                this.addEventListenerWithCleanup(item, 'dragstart', dragStartHandler, `character_${index}_dragstart`);
+                this.addEventListenerWithCleanup(item, 'dragend', dragEndHandler, `character_${index}_dragend`);
             }
         });
 
@@ -521,7 +654,8 @@ class Phase2Manager {
                 item.className += ' draggable-item';
                 item.dataset.locationIndex = index;
                 
-                item.addEventListener('dragstart', (e) => {
+                // Use managed event listeners to prevent memory leaks
+                const dragStartHandler = (e) => {
                     this.draggedElement = {
                         type: 'location',
                         index: index,
@@ -531,12 +665,15 @@ class Phase2Manager {
                     e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setData('text/html', item.outerHTML);
                     item.classList.add('dragging');
-                });
+                };
 
-                item.addEventListener('dragend', (e) => {
+                const dragEndHandler = (e) => {
                     item.classList.remove('dragging');
                     this.draggedElement = null;
-                });
+                };
+
+                this.addEventListenerWithCleanup(item, 'dragstart', dragStartHandler, `location_${index}_dragstart`);
+                this.addEventListenerWithCleanup(item, 'dragend', dragEndHandler, `location_${index}_dragend`);
             }
         });
 
@@ -549,25 +686,32 @@ class Phase2Manager {
     setupDropZones(type) {
         const dropZones = document.querySelectorAll(`.drop-zone[data-type="${type}"], .group-container[data-type="${type}"]`);
         
-        dropZones.forEach(zone => {
-            zone.addEventListener('dragover', (e) => {
+        dropZones.forEach((zone, index) => {
+            // Use managed event listeners to prevent memory leaks
+            const dragOverHandler = (e) => {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
                 zone.classList.add('drag-over');
-            });
+            };
 
-            zone.addEventListener('dragleave', (e) => {
+            const dragLeaveHandler = (e) => {
                 zone.classList.remove('drag-over');
-            });
+            };
 
-            zone.addEventListener('drop', (e) => {
+            const dropHandler = (e) => {
                 e.preventDefault();
                 zone.classList.remove('drag-over');
                 
                 if (this.draggedElement && this.draggedElement.type === type) {
                     this.handleDrop(zone, this.draggedElement);
                 }
-            });
+            };
+
+            // Generate unique keys for each drop zone
+            const zoneKey = `dropzone_${type}_${index}`;
+            this.addEventListenerWithCleanup(zone, 'dragover', dragOverHandler, `${zoneKey}_dragover`);
+            this.addEventListenerWithCleanup(zone, 'dragleave', dragLeaveHandler, `${zoneKey}_dragleave`);
+            this.addEventListenerWithCleanup(zone, 'drop', dropHandler, `${zoneKey}_drop`);
         });
     }
 
@@ -989,10 +1133,14 @@ class Phase2Manager {
             
             exportTab.appendChild(mappingControls);
             
-            // Set up file input handler
-            document.getElementById('mappingFileInput').addEventListener('change', (e) => {
-                this.handleMappingFileImport(e.target.files[0]);
-            });
+            // Set up file input handler with managed event listener
+            const fileInput = document.getElementById('mappingFileInput');
+            if (fileInput) {
+                const fileInputHandler = (e) => {
+                    this.handleMappingFileImport(e.target.files[0]);
+                };
+                this.addEventListenerWithCleanup(fileInput, 'change', fileInputHandler, 'mappingFileInput_change');
+            }
         }
     }
 

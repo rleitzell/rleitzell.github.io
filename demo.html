@@ -149,6 +149,8 @@ FADE OUT.</div>
     </div>
 
     <!-- Include the analysis modules -->
+    <script src="../js/utils.js"></script>
+    <script src="../js/constants.js"></script>
     <script src="../js/models.js"></script>
     <script src="../js/textProcessor.js"></script>
     <script src="../js/sceneAnalyzer.js"></script>
@@ -202,12 +204,12 @@ FADE OUT.</div>
             for (const scene of scenes) {
                 html += `
                     <div style="border-left: 3px solid #3498db; padding-left: 10px; margin-bottom: 15px;">
-                        <strong>Scene ${scene.number || 'Unknown'}</strong><br>
+                        <strong>Scene ${escapeHtml(scene.number || 'Unknown')}</strong><br>
                         <small style="color: #666;">
-                            ${scene.location || 'Unknown'} - ${scene.timeOfDay || 'Unknown'}<br>
-                            Length: ${scene.estimatedLength}/8 pages
+                            ${escapeHtml(scene.location || 'Unknown')} - ${escapeHtml(scene.timeOfDay || 'Unknown')}<br>
+                            Length: ${escapeHtml(scene.estimatedLength)}/8 pages
                         </small>
-                        ${scene.characters.length > 0 ? `<br><em>Characters: ${scene.characters.join(', ')}</em>` : ''}
+                        ${scene.characters.length > 0 ? `<br><em>Characters: ${safeJoin(scene.characters)}</em>` : ''}
                     </div>
                 `;
             }
@@ -226,9 +228,9 @@ FADE OUT.</div>
             for (const character of sortedCharacters) {
                 html += `
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 8px; background: #f8f9fa; border-radius: 3px;">
-                        <span><strong>${character.name}</strong></span>
+                        <span><strong>${escapeHtml(character.name)}</strong></span>
                         <span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em;">
-                            ${character.totalAppearances} scenes
+                            ${escapeHtml(character.totalAppearances)} scenes
                         </span>
                     </div>
                 `;
@@ -248,9 +250,9 @@ FADE OUT.</div>
             for (const location of sortedLocations) {
                 html += `
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 8px; background: #f8f9fa; border-radius: 3px;">
-                        <span><strong>${location.name}</strong></span>
+                        <span><strong>${escapeHtml(location.name)}</strong></span>
                         <span style="background: #e74c3c; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em;">
-                            ${location.totalUses} scenes
+                            ${escapeHtml(location.totalUses)} scenes
                         </span>
                     </div>
                 `;
@@ -266,19 +268,19 @@ FADE OUT.</div>
             const html = `
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                     <div style="text-align: center; padding: 15px; background: #e8f5e8; border-radius: 5px;">
-                        <strong style="font-size: 1.5em; color: #27ae60;">${summary.totalScenes}</strong><br>
+                        <strong style="font-size: 1.5em; color: #27ae60;">${escapeHtml(summary.totalScenes)}</strong><br>
                         <small>Total Scenes</small>
                     </div>
                     <div style="text-align: center; padding: 15px; background: #e8f4fd; border-radius: 5px;">
-                        <strong style="font-size: 1.5em; color: #3498db;">${summary.characterCount}</strong><br>
+                        <strong style="font-size: 1.5em; color: #3498db;">${escapeHtml(summary.characterCount)}</strong><br>
                         <small>Characters</small>
                     </div>
                     <div style="text-align: center; padding: 15px; background: #fdf2e8; border-radius: 5px;">
-                        <strong style="font-size: 1.5em; color: #f39c12;">${summary.locationCount}</strong><br>
+                        <strong style="font-size: 1.5em; color: #f39c12;">${escapeHtml(summary.locationCount)}</strong><br>
                         <small>Locations</small>
                     </div>
                     <div style="text-align: center; padding: 15px; background: #f8e8e8; border-radius: 5px;">
-                        <strong style="font-size: 1.5em; color: #e74c3c;">${summary.estimatedPages}</strong><br>
+                        <strong style="font-size: 1.5em; color: #e74c3c;">${escapeHtml(summary.estimatedPages)}</strong><br>
                         <small>Estimated Pages</small>
                     </div>
                 </div>
@@ -287,14 +289,14 @@ FADE OUT.</div>
                     <h4>Top Characters:</h4>
                     <ul>
                         ${summary.topCharacters.slice(0, 3).map(char => 
-                            `<li>${char.name} (${char.totalAppearances} scenes)</li>`
+                            `<li>${escapeHtml(char.name)} (${escapeHtml(char.totalAppearances)} scenes)</li>`
                         ).join('')}
                     </ul>
                     
                     <h4>Locations Used:</h4>
                     <ul>
                         ${summary.topLocations.map(loc => 
-                            `<li>${loc.name} (${loc.totalUses} scenes)</li>`
+                            `<li>${escapeHtml(loc.name)} (${escapeHtml(loc.totalUses)} scenes)</li>`
                         ).join('')}
                     </ul>
                 </div>
