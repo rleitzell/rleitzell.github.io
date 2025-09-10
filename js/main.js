@@ -78,7 +78,7 @@ class ScreenplayAnalyzer {
     async handleFileSelect(file) {
         if (!file) return;
 
-        if (file.type !== 'application/pdf') {
+        if (file.type !== SCREENPLAY_CONSTANTS.FILE_TYPES.SUPPORTED_PDF_TYPE) {
             this.showError('Please select a PDF file.');
             return;
         }
@@ -92,7 +92,12 @@ class ScreenplayAnalyzer {
 
         } catch (error) {
             console.error('File processing error:', error);
-            this.showError(`Error processing file: ${error.message}`);
+            this.handleError(error, {
+                operation: 'handleFileSelect',
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type
+            });
         }
     }
 
@@ -164,7 +169,11 @@ class ScreenplayAnalyzer {
             // Only show error if this operation is still current
             if (!operation.cancelled && this.currentOperation === operation) {
                 console.error('Processing error:', error);
-                this.showError(`Error processing screenplay: ${error.message}`);
+                this.handleError(error, {
+                    operation: 'processScreenplay',
+                    file: file.name,
+                    operationId: operation.id
+                });
             }
         } finally {
             // Clean up if this is still the current operation
@@ -192,7 +201,7 @@ class ScreenplayAnalyzer {
                     this.currentOperation = null;
                 }
             }
-        }, 100); // Reduced from 500ms for better responsiveness
+        }, SCREENPLAY_CONSTANTS.UI.PROGRESS_ANIMATION_DELAY); // Reduced from 500ms for better responsiveness
     }
 
     /**
@@ -244,7 +253,7 @@ class ScreenplayAnalyzer {
         if (window.phase2Manager && window.phase2Manager.isEditMode) {
             setTimeout(() => {
                 window.phase2Manager.enableDragDropInEditMode();
-            }, 100);
+            }, SCREENPLAY_CONSTANTS.UI.DRAG_DROP_ENABLE_DELAY);
         }
     }
 
@@ -298,7 +307,7 @@ class ScreenplayAnalyzer {
                         ${scene.pageNumber ? `<p><strong>Page:</strong> ${escapeHtml(scene.pageNumber)}</p>` : ''}
                         <details>
                             <summary>Content Preview</summary>
-                            <div class="scene-text">${escapeHtml(this.truncateText(scene.content || '', 300))}</div>
+                            <div class="scene-text">${escapeHtml(this.truncateText(scene.content || '', SCREENPLAY_CONSTANTS.VALIDATION.MAX_CONTENT_PREVIEW_LENGTH))}</div>
                         </details>
                     </div>
                 </div>
@@ -356,20 +365,25 @@ class ScreenplayAnalyzer {
     }
 
     /**
-     * Show error message
+     * Handle error using centralized error handler
      */
-    showError(message) {
+    handleError(error, context = {}) {
         // Hide processing section
         this.elements.processingSection.style.display = 'none';
         
-        // Show error in processing status area
-        this.elements.processingSection.style.display = 'block';
-        this.elements.progressFill.style.width = '0%';
-        this.elements.processingStatus.innerHTML = `<span style="color: red;">Error: ${message}</span>`;
-        
-        setTimeout(() => {
-            this.elements.processingSection.style.display = 'none';
-        }, 5000);
+        // Use centralized error handler
+        window.errorHandler.handle(error, {
+            component: 'ScreenplayAnalyzer',
+            ...context
+        });
+    }
+
+    /**
+     * Show error message (legacy method, redirects to centralized handler)
+     * @deprecated Use handleError instead
+     */
+    showError(message) {
+        this.handleError(new Error(message));
     }
 
     /**
