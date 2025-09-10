@@ -262,11 +262,28 @@ class Phase2Manager {
     }
 
     /**
-     * Open scene editor modal
+     * Open scene editor modal with comprehensive input validation
      */
     openSceneEditor(sceneIndex) {
+        // Comprehensive input validation
+        if (!this.app?.currentAnalysis?.scenes) {
+            console.warn('No analysis data available for scene editing');
+            alert('No analysis data available. Please process a screenplay first.');
+            return;
+        }
+        
+        if (typeof sceneIndex !== 'number' || sceneIndex < 0 || sceneIndex >= this.app.currentAnalysis.scenes.length) {
+            console.warn(`Invalid scene index: ${sceneIndex}. Valid range: 0-${this.app.currentAnalysis.scenes.length - 1}`);
+            alert('Invalid scene selected.');
+            return;
+        }
+        
         const scene = this.app.currentAnalysis.scenes[sceneIndex];
-        if (!scene) return;
+        if (!scene) {
+            console.warn(`Scene at index ${sceneIndex} is null or undefined`);
+            alert('Selected scene data is not available.');
+            return;
+        }
 
         const modal = this.createModal('Edit Scene', `
             <form id="sceneEditForm">
@@ -316,11 +333,48 @@ class Phase2Manager {
     }
 
     /**
-     * Save scene edits
+     * Save scene edits with validation
      */
     saveSceneEdit(sceneIndex) {
+        // Comprehensive input validation
+        if (!this.app?.currentAnalysis?.scenes) {
+            console.warn('No analysis data available for saving scene edits');
+            alert('No analysis data available.');
+            return;
+        }
+        
+        if (typeof sceneIndex !== 'number' || sceneIndex < 0 || sceneIndex >= this.app.currentAnalysis.scenes.length) {
+            console.warn(`Invalid scene index for save: ${sceneIndex}`);
+            alert('Invalid scene selected.');
+            return;
+        }
+        
         const scene = this.app.currentAnalysis.scenes[sceneIndex];
-        if (!scene) return;
+        if (!scene) {
+            console.warn(`Scene at index ${sceneIndex} is null or undefined during save`);
+            alert('Scene data is not available.');
+            return;
+        }
+
+        // Validate form elements exist
+        const formElements = {
+            sceneNumber: document.getElementById('sceneNumber'),
+            sceneSlugline: document.getElementById('sceneSlugline'),
+            sceneLocation: document.getElementById('sceneLocation'),
+            sceneTimeOfDay: document.getElementById('sceneTimeOfDay'),
+            sceneCharacters: document.getElementById('sceneCharacters'),
+            sceneLength: document.getElementById('sceneLength'),
+            sceneContent: document.getElementById('sceneContent')
+        };
+
+        // Check if all form elements exist
+        for (const [fieldName, element] of Object.entries(formElements)) {
+            if (!element) {
+                console.error(`Form element ${fieldName} not found`);
+                alert('Form validation error. Please try again.');
+                return;
+            }
+        }
 
         // Get form values
         const number = parseInt(document.getElementById('sceneNumber').value) || null;
