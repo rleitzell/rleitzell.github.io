@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration - Screenplay Analyzer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .config-section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .config-header {
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-film me-2"></i>Screenplay Analyzer
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">
+                    <i class="fas fa-home me-1"></i>Home
+                </a>
+                <a class="nav-link active" href="/config">
+                    <i class="fas fa-cog me-1"></i>Settings
+                </a>
+                <a class="nav-link" href="/scenes">
+                    <i class="fas fa-list me-1"></i>Scenes
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1><i class="fas fa-cog me-2"></i>Configuration</h1>
+        <p class="text-muted">Configure LLM providers, processing parameters, and analysis settings.</p>
+
+        <!-- LLM Configuration -->
+        <div class="config-section">
+            <div class="config-header">
+                <h3><i class="fas fa-brain me-2"></i>LLM Configuration</h3>
+                <p class="text-muted mb-0">Configure which LLM provider to use for screenplay analysis.</p>
+            </div>
+            
+            <form id="llm-config-form">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="llm-provider" class="form-label">LLM Provider</label>
+                        <select class="form-select" id="llm-provider" name="llm_provider">
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic (Claude)</option>
+                            <option value="local">Local LLM</option>
+                        </select>
+                        <div class="form-text">Choose your preferred language model provider.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="model-name" class="form-label">Model Name</label>
+                        <input type="text" class="form-control" id="model-name" name="model_name" value="gpt-3.5-turbo">
+                        <div class="form-text">Specific model to use (e.g., gpt-4, claude-3-sonnet-20240229).</div>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <label for="api-key" class="form-label">API Key</label>
+                    <input type="password" class="form-control" id="api-key" name="api_key" placeholder="Enter your API key">
+                    <div class="form-text">API key for your chosen provider. Not stored persistently.</div>
+                </div>
+                
+                <div class="mt-3" id="local-endpoint-section" style="display: none;">
+                    <label for="local-endpoint" class="form-label">Local LLM Endpoint</label>
+                    <input type="url" class="form-control" id="local-endpoint" name="local_endpoint" 
+                           value="http://localhost:8080/v1/chat/completions">
+                    <div class="form-text">URL for your local LLM API endpoint (OpenAI-compatible).</div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Processing Parameters -->
+        <div class="config-section">
+            <div class="config-header">
+                <h3><i class="fas fa-sliders-h me-2"></i>Processing Parameters</h3>
+                <p class="text-muted mb-0">Fine-tune how the system processes and analyzes screenplays.</p>
+            </div>
+            
+            <form id="processing-config-form">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="chunk-size" class="form-label">Chunk Size (tokens)</label>
+                        <input type="number" class="form-control" id="chunk-size" name="chunk_size" 
+                               value="2500" min="500" max="8000" step="100">
+                        <div class="form-text">Size of text chunks sent to LLM. Larger = more context, slower processing.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="overlap" class="form-label">Chunk Overlap (tokens)</label>
+                        <input type="number" class="form-control" id="overlap" name="overlap" 
+                               value="300" min="0" max="1000" step="50">
+                        <div class="form-text">Overlap between chunks to ensure scene continuity.</div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <label for="first-chars-hash" class="form-label">Hash Context Length</label>
+                        <input type="number" class="form-control" id="first-chars-hash" name="first_chars_for_hash" 
+                               value="200" min="50" max="500" step="50">
+                        <div class="form-text">Characters used for scene ID generation (affects uniqueness).</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="fuzzy-threshold" class="form-label">Fuzzy Matching Threshold</label>
+                        <input type="number" class="form-control" id="fuzzy-threshold" name="fuzzy_similarity_threshold" 
+                               value="0.85" min="0.5" max="1.0" step="0.05">
+                        <div class="form-text">Similarity threshold for character/location grouping (0.5-1.0).</div>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="layout-enhancement" name="layout_enhancement" checked>
+                        <label class="form-check-label" for="layout-enhancement">
+                            Enable Layout Enhancement
+                        </label>
+                        <div class="form-text">Use PyMuPDF for improved page position accuracy (slower but more precise).</div>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="scene-number-hash" name="include_scene_number_in_hash" checked>
+                        <label class="form-check-label" for="scene-number-hash">
+                            Include Scene Numbers in Hash
+                        </label>
+                        <div class="form-text">Include scene numbers when generating deterministic scene IDs.</div>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="auto-time-inference" name="auto_bulk_time_inference" checked>
+                        <label class="form-check-label" for="auto-time-inference">
+                            Auto Time Inference
+                        </label>
+                        <div class="form-text">Automatically infer time from previous scenes for CONTINUOUS/SAME entries.</div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Character Counting Rules -->
+        <div class="config-section">
+            <div class="config-header">
+                <h3><i class="fas fa-users me-2"></i>Character Counting Rules</h3>
+                <p class="text-muted mb-0">Configure how characters are counted and categorized.</p>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Appearance Count</h5>
+                    <p class="text-muted">Characters featured in action lines or sluglines (not mere mentions in dialogue)</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success me-2"></i>Characters in action descriptions</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Characters mentioned in sluglines</li>
+                        <li><i class="fas fa-times text-danger me-2"></i>Characters only mentioned in other's dialogue</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h5>Speaking Count</h5>
+                    <p class="text-muted">Unique characters with full dialogue blocks (conservative rule)</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success me-2"></i>Characters with dialogue lines</li>
+                        <li><i class="fas fa-times text-danger me-2"></i>Parenthetical-only attributions</li>
+                        <li><i class="fas fa-times text-danger me-2"></i>Voice-only (V.O./O.S.)</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="alert alert-info mt-3">
+                <h6><i class="fas fa-info-circle me-2"></i>Special Cases</h6>
+                <ul class="mb-0">
+                    <li><strong>CROWD/ENSEMBLE:</strong> Counted as 1 appearance</li>
+                    <li><strong>V.O./O.S./CONT'D:</strong> Attributes of character names, not separate entries</li>
+                    <li><strong>Named extras (EXTRA 1, POLICE 1):</strong> Counted individually</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Export Settings -->
+        <div class="config-section">
+            <div class="config-header">
+                <h3><i class="fas fa-download me-2"></i>Export Settings</h3>
+                <p class="text-muted mb-0">Configure output formats and precision settings.</p>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Page Length Precision</h5>
+                    <p class="text-muted">All lengths rounded to 1/8-page increments using ceiling rule</p>
+                    <div class="alert alert-secondary">
+                        <strong>Examples:</strong><br>
+                        0.1 pages → 0.125 pages (minimum)<br>
+                        1.1 pages → 1.125 pages<br>
+                        2.3 pages → 2.375 pages
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h5>CSV Column Mapping</h5>
+                    <table class="table table-sm">
+                        <tr><td>Header</td><td>slugline_raw</td></tr>
+                        <tr><td>INT or EXT</td><td>int_ext</td></tr>
+                        <tr><td>Time</td><td>time_canonical</td></tr>
+                        <tr><td>Scene #</td><td>scene_number_canonical</td></tr>
+                        <tr><td>Page</td><td>page_start</td></tr>
+                        <tr><td>Length</td><td>rounded_length_pages</td></tr>
+                        <tr><td>Character Count</td><td>appearance_count</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="text-center">
+            <button type="button" class="btn btn-primary btn-lg me-3" onclick="saveConfiguration()">
+                <i class="fas fa-save me-2"></i>Save Configuration
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-lg" onclick="resetToDefaults()">
+                <i class="fas fa-undo me-2"></i>Reset to Defaults
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Show/hide local endpoint field based on provider selection
+        document.getElementById('llm-provider').addEventListener('change', function() {
+            const localSection = document.getElementById('local-endpoint-section');
+            if (this.value === 'local') {
+                localSection.style.display = 'block';
+            } else {
+                localSection.style.display = 'none';
+            }
+            
+            // Update model name suggestions
+            const modelInput = document.getElementById('model-name');
+            if (this.value === 'openai') {
+                modelInput.value = 'gpt-3.5-turbo';
+                modelInput.placeholder = 'e.g., gpt-3.5-turbo, gpt-4';
+            } else if (this.value === 'anthropic') {
+                modelInput.value = 'claude-3-sonnet-20240229';
+                modelInput.placeholder = 'e.g., claude-3-sonnet-20240229, claude-3-haiku-20240307';
+            } else {
+                modelInput.value = 'local-model';
+                modelInput.placeholder = 'Model name for your local LLM';
+            }
+        });
+
+        function saveConfiguration() {
+            // In a real implementation, this would save to localStorage or send to server
+            const llmConfig = new FormData(document.getElementById('llm-config-form'));
+            const processingConfig = new FormData(document.getElementById('processing-config-form'));
+            
+            const config = {};
+            for (let [key, value] of llmConfig.entries()) {
+                config[key] = value;
+            }
+            for (let [key, value] of processingConfig.entries()) {
+                config[key] = value;
+            }
+            
+            // Handle checkboxes
+            config.layout_enhancement = document.getElementById('layout-enhancement').checked;
+            config.include_scene_number_in_hash = document.getElementById('scene-number-hash').checked;
+            config.auto_bulk_time_inference = document.getElementById('auto-time-inference').checked;
+            
+            localStorage.setItem('screenplay_analyzer_config', JSON.stringify(config));
+            
+            // Show success message
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+            alert.style.zIndex = '9999';
+            alert.innerHTML = `
+                <i class="fas fa-check-circle me-2"></i>Configuration saved successfully!
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alert);
+            
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.parentNode.removeChild(alert);
+                }
+            }, 3000);
+        }
+
+        function resetToDefaults() {
+            if (confirm('Reset all settings to default values? This cannot be undone.')) {
+                // Reset form values
+                document.getElementById('llm-provider').value = 'openai';
+                document.getElementById('model-name').value = 'gpt-3.5-turbo';
+                document.getElementById('api-key').value = '';
+                document.getElementById('local-endpoint').value = 'http://localhost:8080/v1/chat/completions';
+                document.getElementById('chunk-size').value = '2500';
+                document.getElementById('overlap').value = '300';
+                document.getElementById('first-chars-hash').value = '200';
+                document.getElementById('fuzzy-threshold').value = '0.85';
+                document.getElementById('layout-enhancement').checked = true;
+                document.getElementById('scene-number-hash').checked = true;
+                document.getElementById('auto-time-inference').checked = true;
+                
+                // Hide local endpoint section
+                document.getElementById('local-endpoint-section').style.display = 'none';
+                
+                // Clear localStorage
+                localStorage.removeItem('screenplay_analyzer_config');
+                
+                alert('Configuration reset to defaults.');
+            }
+        }
+
+        // Load saved configuration on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const saved = localStorage.getItem('screenplay_analyzer_config');
+            if (saved) {
+                try {
+                    const config = JSON.parse(saved);
+                    
+                    // Apply saved values
+                    Object.keys(config).forEach(key => {
+                        const element = document.getElementById(key.replace(/_/g, '-'));
+                        if (element) {
+                            if (element.type === 'checkbox') {
+                                element.checked = config[key];
+                            } else {
+                                element.value = config[key];
+                            }
+                        }
+                    });
+                    
+                    // Trigger provider change to show/hide local endpoint
+                    document.getElementById('llm-provider').dispatchEvent(new Event('change'));
+                } catch (e) {
+                    console.error('Failed to load saved configuration:', e);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

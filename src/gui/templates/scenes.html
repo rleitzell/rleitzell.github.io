@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scenes - Screenplay Analyzer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .scene-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+        .scene-card:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .scene-card.flagged {
+            border-left: 4px solid #dc3545;
+        }
+        .scene-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            padding: 1rem;
+            cursor: pointer;
+        }
+        .scene-content {
+            padding: 1rem;
+            display: none;
+        }
+        .scene-content.show {
+            display: block;
+        }
+        .confidence-bar {
+            height: 4px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .confidence-high { background: #28a745; }
+        .confidence-medium { background: #ffc107; }
+        .confidence-low { background: #dc3545; }
+        .scene-text {
+            background: #f8f9fa;
+            border-radius: 4px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .filter-controls {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-film me-2"></i>Screenplay Analyzer
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">
+                    <i class="fas fa-home me-1"></i>Home
+                </a>
+                <a class="nav-link" href="/config">
+                    <i class="fas fa-cog me-1"></i>Settings
+                </a>
+                <a class="nav-link active" href="/scenes">
+                    <i class="fas fa-list me-1"></i>Scenes
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-list me-2"></i>Scene Review</h1>
+            <div>
+                <button class="btn btn-outline-primary" onclick="downloadExport('csv')">
+                    <i class="fas fa-download me-1"></i>CSV
+                </button>
+                <button class="btn btn-outline-primary" onclick="downloadExport('json')">
+                    <i class="fas fa-download me-1"></i>JSON
+                </button>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats-card" id="stats-card" style="display: none;">
+            <div class="row text-center">
+                <div class="col-md-3">
+                    <h3 id="total-scenes">0</h3>
+                    <p class="mb-0">Total Scenes</p>
+                </div>
+                <div class="col-md-3">
+                    <h3 id="flagged-scenes">0</h3>
+                    <p class="mb-0">Flagged for Review</p>
+                </div>
+                <div class="col-md-3">
+                    <h3 id="total-pages">0</h3>
+                    <p class="mb-0">Total Pages</p>
+                </div>
+                <div class="col-md-3">
+                    <h3 id="avg-confidence">0%</h3>
+                    <p class="mb-0">Avg Confidence</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-controls">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="filter-flagged" class="form-label">Filter by Status</label>
+                    <select class="form-select" id="filter-flagged">
+                        <option value="">All Scenes</option>
+                        <option value="true">Flagged Only</option>
+                        <option value="false">Not Flagged</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="filter-int-ext" class="form-label">Interior/Exterior</label>
+                    <select class="form-select" id="filter-int-ext">
+                        <option value="">All</option>
+                        <option value="INT">Interior</option>
+                        <option value="EXT">Exterior</option>
+                        <option value="INT/EXT">Int/Ext</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="filter-time" class="form-label">Time of Day</label>
+                    <select class="form-select" id="filter-time">
+                        <option value="">All Times</option>
+                        <option value="DAY">Day</option>
+                        <option value="NIGHT">Night</option>
+                        <option value="MORNING">Morning</option>
+                        <option value="EVENING">Evening</option>
+                        <option value="CONTINUOUS">Continuous</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="search-scenes" class="form-label">Search</label>
+                    <input type="text" class="form-control" id="search-scenes" placeholder="Search scenes...">
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div class="text-center py-5" id="loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h5 class="mt-3">Loading scenes...</h5>
+        </div>
+
+        <!-- No Data State -->
+        <div class="text-center py-5" id="no-data" style="display: none;">
+            <i class="fas fa-exclamation-triangle fa-3x text-muted mb-3"></i>
+            <h5>No scenes available</h5>
+            <p class="text-muted">Upload and process a screenplay to see scenes here.</p>
+            <a href="/" class="btn btn-primary">
+                <i class="fas fa-upload me-1"></i>Upload Screenplay
+            </a>
+        </div>
+
+        <!-- Scenes List -->
+        <div id="scenes-container"></div>
+    </div>
+
+    <!-- Scene Detail Modal -->
+    <div class="modal fade" id="sceneModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="sceneModalLabel">Scene Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="sceneModalBody">
+                    <!-- Content loaded dynamically -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="saveSceneChanges()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allScenes = [];
+        let filteredScenes = [];
+        let currentSceneId = null;
+
+        // Load scenes on page load
+        document.addEventListener('DOMContentLoaded', loadScenes);
+
+        async function loadScenes() {
+            try {
+                const response = await fetch('/api/scenes');
+                const data = await response.json();
+                
+                allScenes = data.scenes || [];
+                filteredScenes = [...allScenes];
+                
+                document.getElementById('loading').style.display = 'none';
+                
+                if (allScenes.length === 0) {
+                    document.getElementById('no-data').style.display = 'block';
+                } else {
+                    updateStatistics();
+                    renderScenes();
+                    setupFilters();
+                }
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('no-data').style.display = 'block';
+                console.error('Failed to load scenes:', error);
+            }
+        }
+
+        function updateStatistics() {
+            const totalScenes = allScenes.length;
+            const flaggedScenes = allScenes.filter(s => s.flagged_for_review).length;
+            const totalPages = Math.max(...allScenes.map(s => s.page_start + Math.ceil(s.rounded_length_pages)));
+            const avgConfidence = Math.round(
+                allScenes.reduce((sum, s) => sum + s.confidences.confidence_overall, 0) / totalScenes * 100
+            );
+
+            document.getElementById('total-scenes').textContent = totalScenes;
+            document.getElementById('flagged-scenes').textContent = flaggedScenes;
+            document.getElementById('total-pages').textContent = totalPages;
+            document.getElementById('avg-confidence').textContent = avgConfidence + '%';
+            document.getElementById('stats-card').style.display = 'block';
+        }
+
+        function renderScenes() {
+            const container = document.getElementById('scenes-container');
+            
+            if (filteredScenes.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-search fa-2x text-muted mb-3"></i>
+                        <h5>No scenes match your filters</h5>
+                        <p class="text-muted">Try adjusting your search criteria.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filteredScenes.map(scene => `
+                <div class="scene-card ${scene.flagged_for_review ? 'flagged' : ''}">
+                    <div class="scene-header" onclick="toggleScene('${scene.scene_id}')">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">
+                                    <span class="badge bg-secondary me-2">${scene.order}</span>
+                                    ${scene.slugline_raw}
+                                    ${scene.flagged_for_review ? '<i class="fas fa-flag text-danger ms-2"></i>' : ''}
+                                </h6>
+                                <small class="text-muted">
+                                    Page ${scene.page_start} • ${scene.rounded_length_pages} pages • 
+                                    ${scene.appearance_count} characters • ${scene.speaking_count} speaking
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <div class="confidence-bar mb-1" style="width: 60px;">
+                                    <div class="confidence-${getConfidenceClass(scene.confidences.confidence_overall)}" 
+                                         style="width: ${scene.confidences.confidence_overall * 100}%"></div>
+                                </div>
+                                <small class="text-muted">${Math.round(scene.confidences.confidence_overall * 100)}%</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-content" id="scene-${scene.scene_id}">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6>Summary</h6>
+                                <p>${scene.one_liner}</p>
+                                
+                                <h6>Details</h6>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <small><strong>Scene Number:</strong> ${scene.scene_number_canonical}</small><br>
+                                        <small><strong>Location:</strong> ${scene.master_location_canonical}</small><br>
+                                        <small><strong>Time:</strong> ${scene.time_canonical}</small>
+                                    </div>
+                                    <div class="col-6">
+                                        <small><strong>Int/Ext:</strong> ${scene.int_ext}</small><br>
+                                        <small><strong>Sub-location:</strong> ${scene.sub_location_canonical || 'None'}</small><br>
+                                        <small><strong>Length:</strong> ${scene.rounded_length_pages} pages</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-primary btn-sm" onclick="viewSceneDetail('${scene.scene_id}')">
+                                        <i class="fas fa-eye me-1"></i>View Full Details
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="editScene('${scene.scene_id}')">
+                                        <i class="fas fa-edit me-1"></i>Quick Edit
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        ${scene.notes ? `
+                            <div class="mt-3">
+                                <h6>Notes</h6>
+                                <div class="alert alert-info">${scene.notes}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getConfidenceClass(confidence) {
+            if (confidence >= 0.8) return 'high';
+            if (confidence >= 0.6) return 'medium';
+            return 'low';
+        }
+
+        function toggleScene(sceneId) {
+            const content = document.getElementById(`scene-${sceneId}`);
+            content.classList.toggle('show');
+        }
+
+        async function viewSceneDetail(sceneId) {
+            try {
+                const response = await fetch(`/api/scene/${sceneId}`);
+                const scene = await response.json();
+                
+                document.getElementById('sceneModalLabel').textContent = `Scene ${scene.order}: ${scene.slugline_raw}`;
+                document.getElementById('sceneModalBody').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Scene Information</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>Scene ID:</strong></td><td>${scene.scene_id}</td></tr>
+                                <tr><td><strong>Order:</strong></td><td>${scene.order}</td></tr>
+                                <tr><td><strong>Scene Number:</strong></td><td>${scene.scene_number_canonical}</td></tr>
+                                <tr><td><strong>Page Start:</strong></td><td>${scene.page_start}</td></tr>
+                                <tr><td><strong>Length:</strong></td><td>${scene.rounded_length_pages} pages</td></tr>
+                                <tr><td><strong>Characters:</strong></td><td>${scene.scene_chars}</td></tr>
+                            </table>
+                            
+                            <h6>Confidence Scores</h6>
+                            <div class="progress mb-2" style="height: 20px;">
+                                <div class="progress-bar" style="width: ${scene.confidences.confidence_overall * 100}%">
+                                    Overall: ${Math.round(scene.confidences.confidence_overall * 100)}%
+                                </div>
+                            </div>
+                            <div class="progress mb-2" style="height: 20px;">
+                                <div class="progress-bar bg-info" style="width: ${scene.confidences.start_page_confidence * 100}%">
+                                    Page: ${Math.round(scene.confidences.start_page_confidence * 100)}%
+                                </div>
+                            </div>
+                            <div class="progress mb-3" style="height: 20px;">
+                                <div class="progress-bar bg-success" style="width: ${scene.confidences.length_confidence * 100}%">
+                                    Length: ${Math.round(scene.confidences.length_confidence * 100)}%
+                                </div>
+                            </div>
+                            
+                            <h6>Provenance</h6>
+                            <small>
+                                <strong>Page Source:</strong> ${scene.provenance.start_page_source}<br>
+                                <strong>Length Source:</strong> ${scene.provenance.length_source}
+                            </small>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Full Scene Text</h6>
+                            <div class="scene-text">${scene.full_scene_text}</div>
+                        </div>
+                    </div>
+                `;
+                
+                new bootstrap.Modal(document.getElementById('sceneModal')).show();
+                currentSceneId = sceneId;
+            } catch (error) {
+                alert('Failed to load scene details');
+            }
+        }
+
+        function setupFilters() {
+            ['filter-flagged', 'filter-int-ext', 'filter-time', 'search-scenes'].forEach(id => {
+                document.getElementById(id).addEventListener('change', applyFilters);
+                document.getElementById(id).addEventListener('input', applyFilters);
+            });
+        }
+
+        function applyFilters() {
+            const flaggedFilter = document.getElementById('filter-flagged').value;
+            const intExtFilter = document.getElementById('filter-int-ext').value;
+            const timeFilter = document.getElementById('filter-time').value;
+            const searchText = document.getElementById('search-scenes').value.toLowerCase();
+
+            filteredScenes = allScenes.filter(scene => {
+                if (flaggedFilter && scene.flagged_for_review.toString() !== flaggedFilter) return false;
+                if (intExtFilter && scene.int_ext !== intExtFilter) return false;
+                if (timeFilter && scene.time_canonical !== timeFilter) return false;
+                if (searchText && !scene.slugline_raw.toLowerCase().includes(searchText) && 
+                    !scene.one_liner.toLowerCase().includes(searchText)) return false;
+                return true;
+            });
+
+            renderScenes();
+        }
+
+        async function downloadExport(format) {
+            try {
+                const response = await fetch(`/export/${format}`);
+                const result = await response.json();
+                
+                if (result.content) {
+                    const blob = new Blob([result.content], { 
+                        type: format === 'csv' ? 'text/csv' : 'application/json' 
+                    });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = result.filename;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                } else {
+                    alert('Export not available');
+                }
+            } catch (error) {
+                alert(`Export failed: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>
