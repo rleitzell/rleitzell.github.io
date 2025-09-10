@@ -353,4 +353,6 @@ function exportToJSON() {
 // Initialize application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.app = new ScreenplayAnalyzer();
+    // Initialize Phase 2 features
+    window.phase2Manager = new Phase2Manager(window.app);
 });

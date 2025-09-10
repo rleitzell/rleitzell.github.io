@@ -276,3 +276,260 @@ button:hover {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Phase 2 Enhancement Styles */
+.edit-controls {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.edit-mode-controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.edit-mode-controls button {
+    background-color: #6c757d;
+    font-size: 0.9em;
+    padding: 8px 16px;
+}
+
+.edit-mode-controls button:hover {
+    background-color: #5a6268;
+}
+
+.edit-mode-controls button:disabled {
+    background-color: #6c757d;
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.edit-mode-controls #editModeToggle {
+    background-color: #17a2b8;
+}
+
+.edit-mode-controls #editModeToggle:hover {
+    background-color: #138496;
+}
+
+.scene-item {
+    position: relative;
+}
+
+.scene-header {
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.scene-selector {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: white;
+    padding: 5px;
+    border-radius: 3px;
+    border: 1px solid #dee2e6;
+    font-size: 0.8em;
+    z-index: 10;
+}
+
+.scene-selector input[type="checkbox"] {
+    margin-right: 5px;
+}
+
+.scene-edit-btn {
+    background-color: #ffc107;
+    color: #212529;
+    font-size: 0.8em;
+    padding: 4px 8px;
+    margin-left: 10px;
+}
+
+.scene-edit-btn:hover {
+    background-color: #e0a800;
+}
+
+.conflict-indicator {
+    background-color: #dc3545;
+    color: white;
+    font-size: 0.8em;
+    padding: 4px 8px;
+    border-radius: 3px;
+    margin-left: 10px;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    max-width: 90%;
+    max-height: 90%;
+    overflow-y: auto;
+    min-width: 500px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    border-bottom: 1px solid #dee2e6;
+    background-color: #f8f9fa;
+    border-radius: 8px 8px 0 0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #6c757d;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close:hover {
+    color: #495057;
+    background-color: #e9ecef;
+    border-radius: 50%;
+}
+
+.modal-body {
+    padding: 25px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #495057;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-family: 'Courier New', monospace;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #dee2e6;
+}
+
+.form-actions button {
+    padding: 10px 20px;
+    font-size: 14px;
+}
+
+/* Conflict Resolution Styles */
+.conflict-resolution {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.conflict-group {
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #f8f9fa;
+}
+
+.conflict-group h4 {
+    margin: 0 0 15px 0;
+    color: #dc3545;
+}
+
+.conflict-scene {
+    background-color: white;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 3px;
+    border-left: 3px solid #ffc107;
+}
+
+.conflict-scene label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: normal;
+}
+
+.conflict-scene input[type="radio"] {
+    margin-right: 8px;
+    width: auto;
+}
+
+.conflict-scene input[type="number"] {
+    width: 80px;
+    margin-left: 10px;
+    padding: 4px 8px;
+}
+
+/* Bulk Edit Styles */
+.form-group label input[type="checkbox"] {
+    width: auto;
+    margin-right: 10px;
+}
+
+.form-group label input[type="text"],
+.form-group label select,
+.form-group label input[type="number"] {
+    width: auto;
+    min-width: 150px;
+    margin-left: 10px;
+}
