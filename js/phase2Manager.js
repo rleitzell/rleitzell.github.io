@@ -13,6 +13,10 @@ class Phase2Manager {
         this.draggedElement = null;
         this.duplicateScenes = [];
         
+        // Event listener management for memory leak prevention
+        this.eventListeners = new Map();
+        this.boundMethods = new Map();
+        
         this.initializePhase2Features();
     }
 
@@ -24,6 +28,62 @@ class Phase2Manager {
         this.setupDragDropSystem();
         this.setupMappingSystem();
         this.setupDuplicateResolution();
+    }
+
+    /**
+     * Add event listener with cleanup tracking
+     */
+    addEventListenerWithCleanup(element, event, handler, key = null) {
+        if (!element) return;
+        
+        // Use provided key or generate one based on element and event
+        const listenerKey = key || `${element.tagName || 'unknown'}_${element.id || element.className || 'unknown'}_${event}`;
+        
+        // Remove existing listener if present
+        this.removeEventListener(listenerKey);
+        
+        // Add the new listener
+        element.addEventListener(event, handler);
+        
+        // Store reference for cleanup
+        this.eventListeners.set(listenerKey, {
+            element,
+            event,
+            handler
+        });
+    }
+
+    /**
+     * Remove specific event listener
+     */
+    removeEventListener(key) {
+        const listener = this.eventListeners.get(key);
+        if (listener) {
+            listener.element.removeEventListener(listener.event, listener.handler);
+            this.eventListeners.delete(key);
+        }
+    }
+
+    /**
+     * Cleanup all event listeners
+     */
+    cleanup() {
+        this.eventListeners.forEach((listener, key) => {
+            listener.element.removeEventListener(listener.event, listener.handler);
+        });
+        this.eventListeners.clear();
+        this.boundMethods.clear();
+    }
+
+    /**
+     * Get or create bound method for reuse
+     */
+    getBoundMethod(methodName, ...args) {
+        const key = `${methodName}_${args.join('_')}`;
+        if (!this.boundMethods.has(key)) {
+            this.boundMethods.set(key, this[methodName].bind(this, ...args));
+        }
+        return this.boundMethods.get(key);
     }
 
     /**
@@ -141,6 +201,21 @@ class Phase2Manager {
         scenesList.querySelectorAll('.scene-selector').forEach(el => el.remove());
         scenesList.querySelectorAll('.scene-edit-btn').forEach(el => el.remove());
         scenesList.querySelectorAll('.conflict-indicator').forEach(el => el.remove());
+        
+        // Clean up drag/drop event listeners when exiting edit mode
+        // This helps prevent memory leaks when toggling edit mode multiple times
+        const characterItems = document.querySelectorAll('.character-item[draggable="true"]');
+        const locationItems = document.querySelectorAll('.location-item[draggable="true"]');
+        
+        characterItems.forEach((item, index) => {
+            this.removeEventListener(`character_${index}_dragstart`);
+            this.removeEventListener(`character_${index}_dragend`);
+        });
+        
+        locationItems.forEach((item, index) => {
+            this.removeEventListener(`location_${index}_dragstart`);
+            this.removeEventListener(`location_${index}_dragend`);
+        });
     }
 
     /**
@@ -485,7 +560,8 @@ class Phase2Manager {
                 item.className += ' draggable-item';
                 item.dataset.characterIndex = index;
                 
-                item.addEventListener('dragstart', (e) => {
+                // Use managed event listeners to prevent memory leaks
+                const dragStartHandler = (e) => {
                     this.draggedElement = {
                         type: 'character',
                         index: index,
@@ -495,12 +571,15 @@ class Phase2Manager {
                     e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setData('text/html', item.outerHTML);
                     item.classList.add('dragging');
-                });
+                };
 
-                item.addEventListener('dragend', (e) => {
+                const dragEndHandler = (e) => {
                     item.classList.remove('dragging');
                     this.draggedElement = null;
-                });
+                };
+
+                this.addEventListenerWithCleanup(item, 'dragstart', dragStartHandler, `character_${index}_dragstart`);
+                this.addEventListenerWithCleanup(item, 'dragend', dragEndHandler, `character_${index}_dragend`);
             }
         });
 
@@ -521,7 +600,8 @@ class Phase2Manager {
                 item.className += ' draggable-item';
                 item.dataset.locationIndex = index;
                 
-                item.addEventListener('dragstart', (e) => {
+                // Use managed event listeners to prevent memory leaks
+                const dragStartHandler = (e) => {
                     this.draggedElement = {
                         type: 'location',
                         index: index,
@@ -531,12 +611,15 @@ class Phase2Manager {
                     e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setData('text/html', item.outerHTML);
                     item.classList.add('dragging');
-                });
+                };
 
-                item.addEventListener('dragend', (e) => {
+                const dragEndHandler = (e) => {
                     item.classList.remove('dragging');
                     this.draggedElement = null;
-                });
+                };
+
+                this.addEventListenerWithCleanup(item, 'dragstart', dragStartHandler, `location_${index}_dragstart`);
+                this.addEventListenerWithCleanup(item, 'dragend', dragEndHandler, `location_${index}_dragend`);
             }
         });
 
@@ -549,25 +632,32 @@ class Phase2Manager {
     setupDropZones(type) {
         const dropZones = document.querySelectorAll(`.drop-zone[data-type="${type}"], .group-container[data-type="${type}"]`);
         
-        dropZones.forEach(zone => {
-            zone.addEventListener('dragover', (e) => {
+        dropZones.forEach((zone, index) => {
+            // Use managed event listeners to prevent memory leaks
+            const dragOverHandler = (e) => {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
                 zone.classList.add('drag-over');
-            });
+            };
 
-            zone.addEventListener('dragleave', (e) => {
+            const dragLeaveHandler = (e) => {
                 zone.classList.remove('drag-over');
-            });
+            };
 
-            zone.addEventListener('drop', (e) => {
+            const dropHandler = (e) => {
                 e.preventDefault();
                 zone.classList.remove('drag-over');
                 
                 if (this.draggedElement && this.draggedElement.type === type) {
                     this.handleDrop(zone, this.draggedElement);
                 }
-            });
+            };
+
+            // Generate unique keys for each drop zone
+            const zoneKey = `dropzone_${type}_${index}`;
+            this.addEventListenerWithCleanup(zone, 'dragover', dragOverHandler, `${zoneKey}_dragover`);
+            this.addEventListenerWithCleanup(zone, 'dragleave', dragLeaveHandler, `${zoneKey}_dragleave`);
+            this.addEventListenerWithCleanup(zone, 'drop', dropHandler, `${zoneKey}_drop`);
         });
     }
 
@@ -989,10 +1079,14 @@ class Phase2Manager {
             
             exportTab.appendChild(mappingControls);
             
-            // Set up file input handler
-            document.getElementById('mappingFileInput').addEventListener('change', (e) => {
-                this.handleMappingFileImport(e.target.files[0]);
-            });
+            // Set up file input handler with managed event listener
+            const fileInput = document.getElementById('mappingFileInput');
+            if (fileInput) {
+                const fileInputHandler = (e) => {
+                    this.handleMappingFileImport(e.target.files[0]);
+                };
+                this.addEventListenerWithCleanup(fileInput, 'change', fileInputHandler, 'mappingFileInput_change');
+            }
         }
     }
 
