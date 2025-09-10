@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screenplay Analysis Tool - Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            border: 1px solid #ddd;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .test-pending {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .results {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Screenplay Analysis Tool - Test Suite</h1>
+    
+    <div class="test-controls">
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="runModelTests()">Test Models</button>
+        <button onclick="runTextProcessorTests()">Test Text Processor</button>
+        <button onclick="runSceneAnalyzerTests()">Test Scene Analyzer</button>
+        <button onclick="runExportTests()">Test Export Utils</button>
+    </div>
+
+    <div id="testResults"></div>
+
+    <!-- Include the modules to test -->
+    <script src="../js/models.js"></script>
+    <script src="../js/textProcessor.js"></script>
+    <script src="../js/sceneAnalyzer.js"></script>
+    <script src="../js/exportUtils.js"></script>
+
+    <script>
+        /**
+         * Test framework
+         */
+        class TestFramework {
+            constructor() {
+                this.tests = [];
+                this.results = [];
+            }
+
+            describe(name, testFunction) {
+                const suite = {
+                    name: name,
+                    tests: [],
+                    beforeEach: null,
+                    afterEach: null
+                };
+
+                const context = {
+                    it: (testName, testFn) => {
+                        suite.tests.push({ name: testName, fn: testFn });
+                    },
+                    beforeEach: (fn) => {
+                        suite.beforeEach = fn;
+                    },
+                    afterEach: (fn) => {
+                        suite.afterEach = fn;
+                    }
+                };
+
+                testFunction(context);
+                this.tests.push(suite);
+            }
+
+            async runTests(suiteFilter = null) {
+                this.results = [];
+                const resultsDiv = document.getElementById('testResults');
+                resultsDiv.innerHTML = '<h2>Running Tests...</h2>';
+
+                for (const suite of this.tests) {
+                    if (suiteFilter && !suite.name.includes(suiteFilter)) {
+                        continue;
+                    }
+
+                    const suiteResults = {
+                        name: suite.name,
+                        tests: [],
+                        passed: 0,
+                        failed: 0
+                    };
+
+                    for (const test of suite.tests) {
+                        let testResult = {
+                            name: test.name,
+                            status: 'pass',
+                            error: null,
+                            duration: 0
+                        };
+
+                        try {
+                            if (suite.beforeEach) {
+                                await suite.beforeEach();
+                            }
+
+                            const startTime = performance.now();
+                            await test.fn();
+                            const endTime = performance.now();
+                            
+                            testResult.duration = endTime - startTime;
+                            suiteResults.passed++;
+
+                            if (suite.afterEach) {
+                                await suite.afterEach();
+                            }
+                        } catch (error) {
+                            testResult.status = 'fail';
+                            testResult.error = error.message;
+                            suiteResults.failed++;
+                        }
+
+                        suiteResults.tests.push(testResult);
+                    }
+
+                    this.results.push(suiteResults);
+                }
+
+                this.displayResults();
+            }
+
+            displayResults() {
+                const resultsDiv = document.getElementById('testResults');
+                let html = '<h2>Test Results</h2>';
+
+                let totalPassed = 0;
+                let totalFailed = 0;
+
+                for (const suite of this.results) {
+                    totalPassed += suite.passed;
+                    totalFailed += suite.failed;
+
+                    const suiteClass = suite.failed > 0 ? 'test-fail' : 'test-pass';
+                    html += `
+                        <div class="test-section ${suiteClass}">
+                            <h3>${suite.name}</h3>
+                            <p>Passed: ${suite.passed}, Failed: ${suite.failed}</p>
+                    `;
+
+                    for (const test of suite.tests) {
+                        const status = test.status === 'pass' ? '✓' : '✗';
+                        const duration = test.duration.toFixed(2);
+                        html += `
+                            <div style="margin: 10px 0;">
+                                <strong>${status} ${test.name}</strong> (${duration}ms)
+                                ${test.error ? `<br><span style="color: red;">Error: ${test.error}</span>` : ''}
+                            </div>
+                        `;
+                    }
+
+                    html += '</div>';
+                }
+
+                html += `
+                    <div class="test-section ${totalFailed > 0 ? 'test-fail' : 'test-pass'}">
+                        <h3>Summary</h3>
+                        <p><strong>Total Passed:</strong> ${totalPassed}</p>
+                        <p><strong>Total Failed:</strong> ${totalFailed}</p>
+                        <p><strong>Success Rate:</strong> ${((totalPassed / (totalPassed + totalFailed)) * 100).toFixed(1)}%</p>
+                    </div>
+                `;
+
+                resultsDiv.innerHTML = html;
+            }
+        }
+
+        // Assertion helpers
+        function expect(actual) {
+            return {
+                toBe: (expected) => {
+                    if (actual !== expected) {
+                        throw new Error(`Expected ${actual} to be ${expected}`);
+                    }
+                },
+                toEqual: (expected) => {
+                    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+                        throw new Error(`Expected ${JSON.stringify(actual)} to equal ${JSON.stringify(expected)}`);
+                    }
+                },
+                toContain: (expected) => {
+                    if (!actual.includes(expected)) {
+                        throw new Error(`Expected ${actual} to contain ${expected}`);
+                    }
+                },
+                toBeGreaterThan: (expected) => {
+                    if (actual <= expected) {
+                        throw new Error(`Expected ${actual} to be greater than ${expected}`);
+                    }
+                },
+                toBeTruthy: () => {
+                    if (!actual) {
+                        throw new Error(`Expected ${actual} to be truthy`);
+                    }
+                },
+                toBeFalsy: () => {
+                    if (actual) {
+                        throw new Error(`Expected ${actual} to be falsy`);
+                    }
+                }
+            };
+        }
+
+        // Initialize test framework
+        const testFramework = new TestFramework();
+
+        /**
+         * Model Tests
+         */
+        testFramework.describe('Scene Model', ({ it }) => {
+            it('should create a scene with default values', () => {
+                const scene = new Scene();
+                expect(scene.id).toBe(null);
+                expect(scene.number).toBe(null);
+                expect(scene.slugline).toBe('');
+                expect(scene.location).toBe('');
+                expect(scene.timeOfDay).toBe('');
+                expect(scene.content).toBe('');
+                expect(scene.characters).toEqual([]);
+                expect(scene.estimatedLength).toBe(0);
+            });
+
+            it('should generate deterministic scene ID', () => {
+                const scene = new Scene({
+                    number: 1,
+                    location: 'KITCHEN',
+                    timeOfDay: 'DAY'
+                });
+                const id1 = scene.generateId();
+                const id2 = scene.generateId();
+                expect(id1).toBe(id2);
+                expect(id1).toBeTruthy();
+            });
+
+            it('should parse slugline correctly', () => {
+                const scene = new Scene({
+                    slugline: 'INT. KITCHEN - DAY'
+                });
+                scene.parseSlugline();
+                expect(scene.location).toBe('KITCHEN');
+                expect(scene.timeOfDay).toBe('DAY');
+            });
+
+            it('should normalize time of day', () => {
+                const scene = new Scene();
+                expect(scene.normalizeTimeOfDay('day')).toBe('DAY');
+                expect(scene.normalizeTimeOfDay('NIGHT')).toBe('NIGHT');
+                expect(scene.normalizeTimeOfDay('continuous')).toBe('CONTINUOUS');
+            });
+
+            it('should extract characters from content', () => {
+                const scene = new Scene({
+                    content: `JOHN
+Hello there!
+
+JANE
+Hi John, how are you?
+
+JOHN
+I'm doing well, thanks.`
+                });
+                scene.extractCharacters();
+                expect(scene.characters).toContain('JOHN');
+                expect(scene.characters).toContain('JANE');
+                expect(scene.characters.length).toBe(2);
+            });
+
+            it('should estimate scene length', () => {
+                const scene = new Scene({
+                    content: 'This is a short scene with just a few words.'
+                });
+                scene.estimateLength();
+                expect(scene.estimatedLength).toBeGreaterThan(0);
+            });
+        });
+
+        testFramework.describe('Character Model', ({ it }) => {
+            it('should create character with name', () => {
+                const character = new Character('JOHN');
+                expect(character.name).toBe('JOHN');
+                expect(character.scenes).toEqual([]);
+                expect(character.totalAppearances).toBe(0);
+            });
+
+            it('should add scene and increment appearances', () => {
+                const character = new Character('JOHN');
+                character.addScene('scene1');
+                character.addScene('scene2');
+                expect(character.scenes).toContain('scene1');
+                expect(character.scenes).toContain('scene2');
+                expect(character.totalAppearances).toBe(2);
+            });
+
+            it('should not add duplicate scenes', () => {
+                const character = new Character('JOHN');
+                character.addScene('scene1');
+                character.addScene('scene1');
+                expect(character.scenes.length).toBe(1);
+                expect(character.totalAppearances).toBe(1);
+            });
+        });
+
+        /**
+         * Text Processor Tests
+         */
+        testFramework.describe('Text Processor', ({ it }) => {
+            let textProcessor;
+
+            it('should create text processor instance', () => {
+                textProcessor = new TextProcessor();
+                expect(textProcessor).toBeTruthy();
+                expect(textProcessor.sceneBreakPatterns.length).toBeGreaterThan(0);
+            });
+
+            it('should identify scene breaks', () => {
+                textProcessor = new TextProcessor();
+                expect(textProcessor.isSceneBreak('INT. KITCHEN - DAY')).toBeTruthy();
+                expect(textProcessor.isSceneBreak('EXT. GARDEN - NIGHT')).toBeTruthy();
+                expect(textProcessor.isSceneBreak('Regular dialogue line')).toBeFalsy();
+            });
+
+            it('should clean text properly', () => {
+                textProcessor = new TextProcessor();
+                const dirtyText = '  This   has   extra   spaces  \n\n\n  and   newlines  ';
+                const cleanText = textProcessor.cleanText(dirtyText);
+                expect(cleanText).toBe('This has extra spaces and newlines');
+            });
+
+            it('should process text and extract scenes', () => {
+                textProcessor = new TextProcessor();
+                const sampleText = `
+INT. KITCHEN - DAY
+
+JOHN enters the kitchen.
+
+JOHN
+Good morning!
+
+INT. LIVING ROOM - DAY
+
+JANE is reading a book.
+
+JANE
+Hello there.
+                `;
+                
+                const scenes = textProcessor.processText(sampleText);
+                expect(scenes.length).toBe(2);
+                expect(scenes[0].location).toBe('KITCHEN');
+                expect(scenes[1].location).toBe('LIVING ROOM');
+            });
+
+            it('should chunk text appropriately', () => {
+                textProcessor = new TextProcessor();
+                const longText = 'a'.repeat(10000);
+                const chunks = textProcessor.chunkText(longText, 5000);
+                expect(chunks.length).toBeGreaterThan(1);
+                expect(chunks[0].length).toBe(5000);
+                
+                // Test short text doesn't get chunked
+                const shortText = 'short text';
+                const shortChunks = textProcessor.chunkText(shortText, 5000);
+                expect(shortChunks.length).toBe(1);
+                expect(shortChunks[0]).toBe(shortText);
+            });
+        });
+
+        /**
+         * Scene Analyzer Tests
+         */
+        testFramework.describe('Scene Analyzer', ({ it }) => {
+            let sceneAnalyzer;
+
+            it('should create scene analyzer instance', () => {
+                sceneAnalyzer = new SceneAnalyzer();
+                expect(sceneAnalyzer).toBeTruthy();
+                expect(sceneAnalyzer.scenes).toEqual([]);
+            });
+
+            it('should analyze text and return results', async () => {
+                sceneAnalyzer = new SceneAnalyzer();
+                const extractedData = {
+                    text: `
+INT. KITCHEN - DAY
+
+JOHN
+Good morning!
+
+JANE
+Hello!
+
+EXT. GARDEN - NIGHT
+
+JOHN
+Nice evening.
+                    `
+                };
+
+                const results = await sceneAnalyzer.analyzeText(extractedData);
+                expect(results.scenes.length).toBe(2);
+                expect(results.characters.length).toBeGreaterThan(0);
+                expect(results.locations.length).toBeGreaterThan(0);
+                expect(results.summary).toBeTruthy();
+            });
+        });
+
+        /**
+         * Export Utils Tests
+         */
+        testFramework.describe('Export Utils', ({ it }) => {
+            let exportUtils;
+
+            it('should create export utils instance', () => {
+                exportUtils = new ExportUtils();
+                expect(exportUtils).toBeTruthy();
+                expect(exportUtils.formats).toContain('csv');
+                expect(exportUtils.formats).toContain('json');
+            });
+
+            it('should escape CSV values correctly', () => {
+                exportUtils = new ExportUtils();
+                expect(exportUtils.escapeCsvValue('simple')).toBe('simple');
+                expect(exportUtils.escapeCsvValue('has, comma')).toBe('"has, comma"');
+                expect(exportUtils.escapeCsvValue('has "quote"')).toBe('"has ""quote"""');
+            });
+
+            it('should export scenes to CSV', () => {
+                exportUtils = new ExportUtils();
+                const scenes = [
+                    new Scene({
+                        number: 1,
+                        location: 'KITCHEN',
+                        timeOfDay: 'DAY',
+                        slugline: 'INT. KITCHEN - DAY',
+                        characters: ['JOHN', 'JANE'],
+                        estimatedLength: 2,
+                        content: 'A simple scene'
+                    })
+                ];
+
+                const csv = exportUtils.exportScenesCSV(scenes);
+                expect(csv).toContain('Scene Number');
+                expect(csv).toContain('KITCHEN');
+                expect(csv).toContain('JOHN; JANE');
+            });
+
+            it('should generate filename with timestamp', () => {
+                exportUtils = new ExportUtils();
+                const filename = exportUtils.generateFilename('test', 'csv');
+                expect(filename).toContain('test_');
+                expect(filename).toContain('.csv');
+            });
+        });
+
+        /**
+         * Test control functions
+         */
+        function runAllTests() {
+            testFramework.runTests();
+        }
+
+        function runModelTests() {
+            testFramework.runTests('Model');
+        }
+
+        function runTextProcessorTests() {
+            testFramework.runTests('Text Processor');
+        }
+
+        function runSceneAnalyzerTests() {
+            testFramework.runTests('Scene Analyzer');
+        }
+
+        function runExportTests() {
+            testFramework.runTests('Export Utils');
+        }
+
+        // Auto-run tests on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Test page loaded. Click "Run All Tests" to start testing.');
+        });
+    </script>
+</body>
+</html>
