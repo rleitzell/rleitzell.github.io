@@ -22,18 +22,18 @@ class SceneExporter:
         
         with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
             if csv_rows:
-                fieldnames = list(csv_rows[0].dict(by_alias=True).keys())
+                fieldnames = list(csv_rows[0].model_dump(by_alias=True).keys())
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
                 
                 for row in csv_rows:
-                    writer.writerow(row.dict(by_alias=True))
+                    writer.writerow(row.model_dump(by_alias=True))
     
     def export_json(self, scenes: List[Scene], output_path: Path, include_metadata: bool = True) -> None:
         """Export scenes to JSON format."""
         if include_metadata:
             # Full developer JSON with all metadata
-            scenes_data = [scene.dict() for scene in scenes]
+            scenes_data = [scene.model_dump() for scene in scenes]
         else:
             # Simplified JSON for external use
             scenes_data = [self._scene_to_simple_dict(scene) for scene in scenes]
