@@ -1,0 +1,14 @@
+{
+  "name": "screenplay-analyzer",
+  "version": "1.0.0",
+  "description": "LLM-powered screenplay analysis tool that converts PDF screenplays to structured data",
+  "main": "src/main.py",
+  "scripts": {
+    "start": "python src/main.py",
+    "test": "pytest tests/",
+    "dev": "uvicorn src.app:app --reload --host 0.0.0.0 --port 8000"
+  },
+  "keywords": ["screenplay", "llm", "pdf", "analysis"],
+  "author": "rleitzell",
+  "license": "MIT"
+}
