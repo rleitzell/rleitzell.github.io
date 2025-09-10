@@ -156,6 +156,13 @@ class ScreenplayAnalyzer {
         this.displayScenes();
         this.displayCharacters();
         this.displayLocations();
+        
+        // Enable Phase 2 drag/drop if in edit mode
+        if (window.phase2Manager && window.phase2Manager.isEditMode) {
+            setTimeout(() => {
+                window.phase2Manager.enableDragDropInEditMode();
+            }, 100);
+        }
     }
 
     /**
@@ -353,4 +360,6 @@ function exportToJSON() {
 // Initialize application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.app = new ScreenplayAnalyzer();
+    // Initialize Phase 2 features
+    window.phase2Manager = new Phase2Manager(window.app);
 });

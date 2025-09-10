@@ -306,6 +306,31 @@ class SceneAnalyzer {
     }
 
     /**
+     * Update analysis data after scene modifications (Phase 2)
+     */
+    updateAnalysisData(analysisData) {
+        if (!analysisData || !analysisData.scenes) {
+            console.warn('Invalid analysis data provided for update');
+            return;
+        }
+
+        // Update scenes
+        this.scenes = analysisData.scenes;
+
+        // Rebuild characters and locations from updated scenes
+        this.characters.clear();
+        this.locations.clear();
+        this.processCharactersAndLocations();
+
+        // Update the analysis data object
+        analysisData.characters = Array.from(this.characters.values());
+        analysisData.locations = Array.from(this.locations.values());
+        analysisData.summary = this.generateSummary();
+
+        console.log('Analysis data updated with new scene information');
+    }
+
+    /**
      * Clear all data
      */
     clear() {

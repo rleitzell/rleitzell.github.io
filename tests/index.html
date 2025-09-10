@@ -64,6 +64,7 @@
         <button onclick="runTextProcessorTests()">Test Text Processor</button>
         <button onclick="runSceneAnalyzerTests()">Test Scene Analyzer</button>
         <button onclick="runExportTests()">Test Export Utils</button>
+        <button onclick="runPhase2Tests()">Test Phase 2 Features</button>
     </div>
 
     <div id="testResults"></div>
@@ -73,6 +74,7 @@
     <script src="../js/textProcessor.js"></script>
     <script src="../js/sceneAnalyzer.js"></script>
     <script src="../js/exportUtils.js"></script>
+    <script src="../js/phase2Manager.js"></script>
 
     <script>
         /**
@@ -496,6 +498,314 @@ Nice evening.
         });
 
         /**
+         * Phase 2 Manager Tests
+         */
+        testFramework.describe('Phase 2 Manager', ({ it, beforeEach, afterEach }) => {
+            let phase2Manager;
+            let mockApp;
+            let testScenes;
+
+            beforeEach(() => {
+                // Create mock app with analysis data
+                testScenes = [
+                    new Scene({
+                        number: 1,
+                        location: 'KITCHEN',
+                        timeOfDay: 'DAY',
+                        slugline: 'INT. KITCHEN - DAY',
+                        characters: ['JOHN', 'JANE'],
+                        estimatedLength: 2,
+                        content: 'JOHN\nHello!\n\nJANE\nHi there!'
+                    }),
+                    new Scene({
+                        number: 1, // Duplicate number
+                        location: 'LIVING ROOM',
+                        timeOfDay: 'NIGHT',
+                        slugline: 'INT. LIVING ROOM - NIGHT',
+                        characters: ['JANE', 'BOB'],
+                        estimatedLength: 3,
+                        content: 'JANE\nGoodnight!\n\nBOB\nSee you tomorrow!'
+                    }),
+                    new Scene({
+                        number: 2,
+                        location: 'KITCHEN',
+                        timeOfDay: 'MORNING',
+                        slugline: 'INT. KITCHEN - MORNING',
+                        characters: ['JOHN'],
+                        estimatedLength: 1,
+                        content: 'JOHN\nCoffee time!'
+                    })
+                ];
+
+                // Generate IDs for scenes
+                testScenes.forEach(scene => scene.id = scene.generateId());
+
+                mockApp = {
+                    currentAnalysis: {
+                        scenes: testScenes,
+                        characters: [
+                            new Character('JOHN'),
+                            new Character('JANE'),
+                            new Character('BOB')
+                        ],
+                        locations: [
+                            { name: 'KITCHEN', scenes: [], totalUses: 2 },
+                            { name: 'LIVING ROOM', scenes: [], totalUses: 1 }
+                        ]
+                    },
+                    sceneAnalyzer: {
+                        updateAnalysisData: (data) => {
+                            // Mock implementation
+                            return data;
+                        }
+                    },
+                    displayResults: () => {
+                        // Mock implementation
+                    },
+                    displayScenes: () => {
+                        // Mock implementation
+                    }
+                };
+
+                // Create DOM elements that Phase2Manager expects
+                if (!document.getElementById('resultsSection')) {
+                    const resultsSection = document.createElement('div');
+                    resultsSection.id = 'resultsSection';
+                    resultsSection.innerHTML = `
+                        <div class="results-tabs"></div>
+                    `;
+                    document.body.appendChild(resultsSection);
+                }
+
+                phase2Manager = new Phase2Manager(mockApp);
+            });
+
+            afterEach(() => {
+                // Clean up DOM
+                const resultsSection = document.getElementById('resultsSection');
+                if (resultsSection) {
+                    resultsSection.remove();
+                }
+                const modals = document.querySelectorAll('.modal-overlay');
+                modals.forEach(modal => modal.remove());
+            });
+
+            it('should create phase2 manager instance', () => {
+                expect(phase2Manager).toBeTruthy();
+                expect(phase2Manager.app).toBe(mockApp);
+                expect(phase2Manager.isEditMode).toBe(false);
+                expect(phase2Manager.selectedScenes).toBeTruthy();
+                expect(phase2Manager.characterMappings).toBeTruthy();
+                expect(phase2Manager.locationMappings).toBeTruthy();
+            });
+
+            it('should initialize edit controls', () => {
+                const editControls = document.querySelector('.edit-controls');
+                expect(editControls).toBeTruthy();
+                
+                const editModeToggle = document.getElementById('editModeToggle');
+                expect(editModeToggle).toBeTruthy();
+                expect(editModeToggle.textContent).toContain('Enable Edit Mode');
+            });
+
+            it('should toggle edit mode', () => {
+                expect(phase2Manager.isEditMode).toBe(false);
+                
+                phase2Manager.toggleEditMode();
+                expect(phase2Manager.isEditMode).toBe(true);
+                
+                const toggleBtn = document.getElementById('editModeToggle');
+                expect(toggleBtn.textContent).toContain('View Mode');
+                
+                phase2Manager.toggleEditMode();
+                expect(phase2Manager.isEditMode).toBe(false);
+            });
+
+            it('should detect duplicate scene numbers', () => {
+                const scene1 = testScenes[0]; // Scene number 1
+                const scene2 = testScenes[1]; // Scene number 1 (duplicate)
+                const scene3 = testScenes[2]; // Scene number 2
+                
+                expect(phase2Manager.isDuplicateSceneNumber(scene1)).toBe(true);
+                expect(phase2Manager.isDuplicateSceneNumber(scene2)).toBe(true);
+                expect(phase2Manager.isDuplicateSceneNumber(scene3)).toBe(false);
+            });
+
+            it('should find duplicate scenes', () => {
+                const duplicates = phase2Manager.findDuplicateScenes();
+                expect(duplicates.length).toBe(1);
+                expect(duplicates[0].number).toBe(1);
+                expect(duplicates[0].scenes.length).toBe(2);
+            });
+
+            it('should handle scene selection', () => {
+                phase2Manager.toggleSceneSelection(0, true);
+                expect(phase2Manager.selectedScenes.has(0)).toBe(true);
+                
+                phase2Manager.toggleSceneSelection(1, true);
+                expect(phase2Manager.selectedScenes.has(1)).toBe(true);
+                expect(phase2Manager.selectedScenes.size).toBe(2);
+                
+                phase2Manager.toggleSceneSelection(0, false);
+                expect(phase2Manager.selectedScenes.has(0)).toBe(false);
+                expect(phase2Manager.selectedScenes.size).toBe(1);
+            });
+
+            it('should create modal dialog', () => {
+                const modal = phase2Manager.createModal('Test Title', '<p>Test content</p>');
+                expect(modal).toBeTruthy();
+                expect(modal.className).toBe('modal-overlay');
+                expect(modal.innerHTML).toContain('Test Title');
+                expect(modal.innerHTML).toContain('Test content');
+            });
+
+            it('should auto-resolve conflicts', () => {
+                const originalNumbers = testScenes.map(s => s.number);
+                expect(originalNumbers).toEqual([1, 1, 2]); // Has duplicates
+                
+                phase2Manager.autoResolveConflicts();
+                
+                const newNumbers = testScenes.map(s => s.number);
+                expect(newNumbers).toEqual([1, 2, 3]); // No duplicates
+            });
+        });
+
+        testFramework.describe('Phase 2 Scene Updates', ({ it, beforeEach }) => {
+            let sceneAnalyzer;
+            let testData;
+
+            beforeEach(() => {
+                sceneAnalyzer = new SceneAnalyzer();
+                testData = {
+                    scenes: [
+                        new Scene({
+                            number: 1,
+                            location: 'KITCHEN',
+                            timeOfDay: 'DAY',
+                            characters: ['JOHN'],
+                            content: 'Test content'
+                        })
+                    ],
+                    characters: [],
+                    locations: [],
+                    summary: {}
+                };
+                testData.scenes[0].id = testData.scenes[0].generateId();
+            });
+
+            it('should update analysis data after scene modifications', () => {
+                // Modify scene
+                testData.scenes[0].location = 'LIVING ROOM';
+                testData.scenes[0].characters = ['JOHN', 'JANE'];
+                
+                sceneAnalyzer.updateAnalysisData(testData);
+                
+                expect(testData.characters.length).toBeGreaterThan(0);
+                expect(testData.locations.length).toBeGreaterThan(0);
+                expect(testData.summary).toBeTruthy();
+            });
+
+            it('should handle invalid analysis data gracefully', () => {
+                // Test with null data
+                let errorThrown = false;
+                try {
+                    sceneAnalyzer.updateAnalysisData(null);
+                } catch (error) {
+                    errorThrown = true;
+                }
+                expect(errorThrown).toBeFalsy();
+
+                // Test with missing scenes
+                errorThrown = false;
+                try {
+                    sceneAnalyzer.updateAnalysisData({});
+                } catch (error) {
+                    errorThrown = true;
+                }
+                expect(errorThrown).toBeFalsy();
+            });
+        });
+
+        testFramework.describe('Phase 2 UI Integration', ({ it, beforeEach, afterEach }) => {
+            let container;
+
+            beforeEach(() => {
+                container = document.createElement('div');
+                container.innerHTML = `
+                    <div id="resultsSection" style="display: block;">
+                        <div class="results-tabs"></div>
+                        <div id="scenesList">
+                            <div class="scene-item">
+                                <div class="scene-header">
+                                    <span class="scene-number">Scene 1</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(container);
+            });
+
+            afterEach(() => {
+                container.remove();
+                const modals = document.querySelectorAll('.modal-overlay');
+                modals.forEach(modal => modal.remove());
+            });
+
+            it('should add edit controls to results section', () => {
+                const mockApp = {
+                    currentAnalysis: { scenes: [], characters: [], locations: [] },
+                    sceneAnalyzer: { updateAnalysisData: () => {} },
+                    displayResults: () => {}
+                };
+
+                new Phase2Manager(mockApp);
+                
+                const editControls = document.querySelector('.edit-controls');
+                expect(editControls).toBeTruthy();
+                
+                const toggleButton = document.getElementById('editModeToggle');
+                expect(toggleButton).toBeTruthy();
+            });
+
+            it('should create scene editor form with all required fields', () => {
+                const mockApp = {
+                    currentAnalysis: {
+                        scenes: [new Scene({
+                            number: 1,
+                            location: 'TEST LOCATION',
+                            timeOfDay: 'DAY',
+                            slugline: 'INT. TEST LOCATION - DAY',
+                            characters: ['TEST CHARACTER'],
+                            estimatedLength: 2,
+                            content: 'Test content'
+                        })],
+                        characters: [],
+                        locations: []
+                    },
+                    sceneAnalyzer: { updateAnalysisData: () => {} },
+                    displayResults: () => {}
+                };
+
+                const phase2Manager = new Phase2Manager(mockApp);
+                phase2Manager.openSceneEditor(0);
+                
+                // Check modal was created
+                const modal = document.querySelector('.modal-overlay');
+                expect(modal).toBeTruthy();
+                
+                // Check form fields exist
+                expect(document.getElementById('sceneNumber')).toBeTruthy();
+                expect(document.getElementById('sceneSlugline')).toBeTruthy();
+                expect(document.getElementById('sceneLocation')).toBeTruthy();
+                expect(document.getElementById('sceneTimeOfDay')).toBeTruthy();
+                expect(document.getElementById('sceneCharacters')).toBeTruthy();
+                expect(document.getElementById('sceneLength')).toBeTruthy();
+                expect(document.getElementById('sceneContent')).toBeTruthy();
+            });
+        });
+
+        /**
          * Test control functions
          */
         function runAllTests() {
@@ -516,6 +826,10 @@ Nice evening.
 
         function runExportTests() {
             testFramework.runTests('Export Utils');
+        }
+
+        function runPhase2Tests() {
+            testFramework.runTests('Phase 2');
         }
 
         // Auto-run tests on page load
