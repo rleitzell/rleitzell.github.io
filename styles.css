@@ -533,3 +533,353 @@ button:hover {
     min-width: 150px;
     margin-left: 10px;
 }
+
+/* Drag and Drop Grouping Styles */
+.grouping-controls {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.grouping-header {
+    margin-bottom: 15px;
+}
+
+.grouping-header h4 {
+    margin: 0 0 10px 0;
+    color: #495057;
+}
+
+.grouping-header p {
+    margin: 0 0 15px 0;
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
+.grouping-header button {
+    margin-right: 10px;
+    margin-bottom: 5px;
+    padding: 6px 12px;
+    font-size: 0.85em;
+}
+
+.grouping-area {
+    min-height: 200px;
+    border: 2px dashed #dee2e6;
+    border-radius: 5px;
+    padding: 15px;
+    background-color: white;
+}
+
+.drop-zone {
+    border: 2px dashed #adb5bd;
+    border-radius: 5px;
+    padding: 30px;
+    text-align: center;
+    color: #6c757d;
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+}
+
+.drop-zone.drag-over {
+    border-color: #28a745;
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.drop-zone p {
+    margin: 0;
+    font-style: italic;
+}
+
+/* Draggable Items */
+.draggable-item {
+    cursor: move;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.draggable-item:hover {
+    border-color: #007bff;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+}
+
+.draggable-item.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+}
+
+/* Group Containers */
+.group-container {
+    border: 1px solid #28a745;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    background-color: #f8fff9;
+    transition: all 0.3s ease;
+}
+
+.group-container.drag-over {
+    border-color: #20c997;
+    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
+}
+
+.group-header {
+    background-color: #28a745;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px 5px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.group-header h5 {
+    margin: 0;
+    font-size: 1em;
+}
+
+.group-header .group-name {
+    flex: 1;
+    min-width: 150px;
+    padding: 4px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #495057;
+}
+
+.group-header button {
+    padding: 4px 8px;
+    font-size: 0.8em;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    margin: 0;
+}
+
+.group-header button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.group-header .merge-btn {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+}
+
+.group-header .merge-btn:hover {
+    background-color: #138496;
+}
+
+.group-header .ungroup-btn {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+}
+
+.group-header .ungroup-btn:hover {
+    background-color: #e0a800;
+}
+
+.group-header .delete-btn {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.group-header .delete-btn:hover {
+    background-color: #c82333;
+}
+
+.group-items {
+    padding: 15px;
+    min-height: 50px;
+}
+
+.group-item {
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.group-item:hover {
+    border-color: #28a745;
+    box-shadow: 0 1px 3px rgba(40, 167, 69, 0.2);
+}
+
+.group-item:last-child {
+    margin-bottom: 0;
+}
+
+.item-name {
+    font-weight: 500;
+    color: #495057;
+}
+
+.item-count {
+    background-color: #28a745;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.8em;
+}
+
+.empty-group {
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+    margin: 20px 0;
+}
+
+/* Responsive adjustments for grouping */
+@media (max-width: 768px) {
+    .group-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .group-header .group-name {
+        margin-bottom: 10px;
+    }
+    
+    .grouping-header button {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+}
+
+/* Mapping System Styles */
+.mapping-controls {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 20px;
+}
+
+.mapping-section h3 {
+    margin: 0 0 15px 0;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+    padding-bottom: 10px;
+}
+
+.mapping-section p {
+    margin: 0 0 20px 0;
+    color: #6c757d;
+}
+
+.mapping-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.mapping-group {
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 15px;
+}
+
+.mapping-group h4 {
+    margin: 0 0 15px 0;
+    color: #495057;
+    font-size: 1em;
+}
+
+.mapping-group button {
+    display: block;
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    font-size: 0.9em;
+}
+
+.mapping-group button:last-child {
+    margin-bottom: 0;
+}
+
+.current-mappings {
+    border-top: 1px solid #dee2e6;
+    padding-top: 20px;
+}
+
+.current-mappings h4 {
+    margin: 0 0 20px 0;
+    color: #495057;
+}
+
+.mappings-list {
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.mappings-list h5 {
+    margin: 0 0 10px 0;
+    color: #495057;
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.mappings-content {
+    min-height: 40px;
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
+.mapping-item {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 3px;
+    padding: 6px 10px;
+    margin-bottom: 5px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85em;
+}
+
+.mapping-item:last-child {
+    margin-bottom: 0;
+}
+
+.sample-mapping pre {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 15px;
+    overflow-x: auto;
+    font-size: 0.85em;
+    color: #495057;
+}
+
+.sample-mapping ul {
+    margin: 15px 0;
+    padding-left: 25px;
+}
+
+.sample-mapping li {
+    margin-bottom: 5px;
+    color: #6c757d;
+}
+
+/* Responsive adjustments for mapping */
+@media (max-width: 768px) {
+    .mapping-actions {
+        grid-template-columns: 1fr;
+    }
+    
+    .mapping-controls {
+        padding: 15px;
+    }
+}
